@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Workout Admin Backoffice
 
-## Getting Started
+MVP backoffice for workout club admins.
 
-First, run the development server:
+## Features
+- Admin login with a shared dashboard key
+- Member registration
+- Weekly goal setup by member
+- Workout record registration with proof images
+- Weekly dashboard for progress tracking
 
+## Tech Stack
+- Next.js (App Router)
+- Supabase (Postgres + Storage)
+
+## 1) Environment Variables
+Copy `.env.example` and create `.env`.
+
+Required values:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `ADMIN_DASHBOARD_KEY`
+
+## 2) Supabase SQL
+Run the following file in the Supabase SQL Editor:
+
+- `supabase/schema.sql`
+
+This creates:
+- `members`
+- `weekly_goals`
+- `workout_sessions`
+- Storage bucket: `workout-proofs`
+
+## 3) Local Development
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open:
+- `http://localhost:3000`
+- `http://localhost:3000/login`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 4) Deployment
+See the full deployment guide here:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- [docs/deployment-guide.md](./docs/deployment-guide.md)
 
-## Learn More
+Quick production deploy:
 
-To learn more about Next.js, take a look at the following resources:
+```powershell
+npm run deploy:prod
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Deploy and assign an alias:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\deploy-vercel.ps1 -Alias deukgeun-admin.vercel.app
+```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Security Notes
+- `ADMIN_DASHBOARD_KEY` is the shared admin login key.
+- `SUPABASE_SERVICE_ROLE_KEY` is server-only and must never be exposed to the client.
+- If you need per-admin permissions later, migrate to Supabase Auth + RBAC.

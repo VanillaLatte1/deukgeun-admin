@@ -1,0 +1,230 @@
+﻿"use client";
+
+import { useActionState, useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+
+import {
+  deleteWorkoutSession,
+  updateWorkoutSession,
+  type WorkoutActionState,
+} from "@/app/workouts/actions";
+import { FileInputField } from "@/components/file-input-field";
+import { Modal } from "@/components/modal";
+import type { WorkoutSession } from "@/lib/data";
+import { statusLabel, type ProgressStatus } from "@/lib/progress";
+
+type WorkoutManageTableProps = {
+  workouts: WorkoutSession[];
+};
+
+const initialActionState: WorkoutActionState = {
+  ok: false,
+  message: "",
+  submittedAt: 0,
+};
+
+export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
+  const router = useRouter();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isDeleting, startDeleteTransition] = useTransition();
+  const [showStartUploader, setShowStartUploader] = useState(false);
+  const [showEndUploader, setShowEndUploader] = useState(false);
+
+  const [updateState, updateAction, updatePending] = useActionState(
+    updateWorkoutSession,
+    initialActionState,
+  );
+  const [deleteState, deleteAction] = useActionState(deleteWorkoutSession, initialActionState);
+
+  useEffect(() => {
+    if (updateState.ok || deleteState.ok) {
+      router.refresh();
+    }
+  }, [updateState.ok, deleteState.ok, router]);
+
+  useEffect(() => {
+    setShowStartUploader(false);
+    setShowEndUploader(false);
+  }, [editingId]);
+
+  const editingWorkout = workouts.find((item) => item.id === editingId) ?? null;
+
+  return (
+    <>
+      <table className="table">
+        <thead>
+          <tr>
+            <th>등록시각</th>
+            <th>회원</th>
+            <th>운동일</th>
+            <th>회차</th>
+            <th>시간(분)</th>
+            <th>진행 상태</th>
+            <th>시작 이미지</th>
+            <th>종료 이미지</th>
+            <th>관리</th>
+          </tr>
+        </thead>
+        <tbody>
+          {workouts.map((workout) => {
+            const status: ProgressStatus =
+              workout.duration_minutes > 0 ? "complete" : "in_progress";
+
+            return (
+              <tr key={workout.id}>
+                <td>{new Date(workout.created_at).toLocaleString("ko-KR")}</td>
+                <td>{workout.members?.name ?? "-"}</td>
+                <td>{workout.workout_date}</td>
+                <td>{workout.session_no}</td>
+                <td>{workout.duration_minutes}</td>
+                <td>
+                  <span className={`badge status-${status}`}>{statusLabel(status)}</span>
+                </td>
+                <td className="path-cell">{workout.start_image_path}</td>
+                <td className="path-cell">{workout.end_image_path}</td>
+                <td>
+                  <div className="row-actions">
+                    <button
+                      type="button"
+                      className="ghost-btn"
+                      onClick={() => setEditingId(workout.id)}
+                    >
+                      수정
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost-btn"
+                      onClick={() => setDeleteTargetId(workout.id)}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      {updateState.message && !updateState.ok ? <p className="error">{updateState.message}</p> : null}
+      {deleteState.message && !deleteState.ok ? <p className="error">{deleteState.message}</p> : null}
+
+      <Modal
+        open={Boolean(editingWorkout) && !updateState.ok}
+        title="인증 수정"
+        description="운동 날짜, 회차, 시간, 메모를 수정할 수 있으며 시작/종료 이미지를 교체할 수 있습니다."
+        onClose={() => setEditingId(null)}
+        size="lg"
+        showDefaultActions={false}
+      >
+        {editingWorkout ? (
+          <form action={updateAction} className="form-grid edit-modal-grid">
+            <input type="hidden" name="id" value={editingWorkout.id} />
+
+            <label>
+              운동 날짜
+              <input
+                type="date"
+                name="workout_date"
+                defaultValue={editingWorkout.workout_date}
+                required
+              />
+            </label>
+
+            <label>
+              회차
+              <select name="session_no" defaultValue={String(editingWorkout.session_no)}>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+            </label>
+
+            <label>
+              운동 시간(분)
+              <input
+                type="number"
+                name="duration_minutes"
+                min={0}
+                defaultValue={editingWorkout.duration_minutes}
+                required
+              />
+            </label>
+
+            <label>
+              메모 (선택)
+              <textarea name="notes" rows={3} defaultValue={editingWorkout.notes ?? ""} />
+            </label>
+
+            <div className="edit-proof-preview span-2">
+              <div className="edit-proof-card">
+                <div className="edit-proof-head">
+                  <strong>시작 이미지(현재)</strong>
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    onClick={() => setShowStartUploader((prev) => !prev)}
+                  >
+                    변경
+                  </button>
+                </div>
+                {editingWorkout.start_image_url ? (
+                  <img src={editingWorkout.start_image_url} alt="시작 인증 이미지" loading="lazy" />
+                ) : (
+                  <span className="muted">이미지를 불러올 수 없습니다.</span>
+                )}
+                {showStartUploader ? (
+                  <FileInputField label="시작 이미지 업로드" name="start_image" />
+                ) : null}
+              </div>
+
+              <div className="edit-proof-card">
+                <div className="edit-proof-head">
+                  <strong>종료 이미지(현재)</strong>
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    onClick={() => setShowEndUploader((prev) => !prev)}
+                  >
+                    변경
+                  </button>
+                </div>
+                {editingWorkout.end_image_url ? (
+                  <img src={editingWorkout.end_image_url} alt="종료 인증 이미지" loading="lazy" />
+                ) : (
+                  <span className="muted">이미지를 불러올 수 없습니다.</span>
+                )}
+                {showEndUploader ? <FileInputField label="종료 이미지 업로드" name="end_image" /> : null}
+              </div>
+            </div>
+
+            <p className="muted span-2">변경 버튼을 눌러 이미지를 선택하지 않으면 기존 이미지가 유지됩니다.</p>
+
+            <button className="primary-btn" type="submit" disabled={updatePending}>
+              {updatePending ? "수정 중..." : "수정"}
+            </button>
+          </form>
+        ) : null}
+      </Modal>
+
+      <Modal
+        open={Boolean(deleteTargetId) && !deleteState.ok}
+        title="인증 삭제"
+        description="정말 이 인증을 삭제할까요? 삭제 후 복구할 수 없습니다."
+        onClose={() => setDeleteTargetId(null)}
+        confirmLabel={isDeleting ? "삭제 중..." : "삭제"}
+        onConfirm={() => {
+          if (!deleteTargetId || isDeleting) return;
+          startDeleteTransition(async () => {
+            const formData = new FormData();
+            formData.set("id", deleteTargetId);
+            await deleteAction(formData);
+          });
+        }}
+      />
+    </>
+  );
+}

@@ -1,0 +1,8 @@
+﻿<svg width="220" height="56" viewBox="0 0 220 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0.5" y="0.5" width="219" height="55" rx="14" fill="#FFF3CD" stroke="#C98900"/>
+  <circle cx="26" cy="28" r="15" fill="#FFB300"/>
+  <rect x="17" y="26" width="18" height="4" rx="2" fill="#5F4000"/>
+  <rect x="14" y="22" width="4" height="12" rx="2" fill="#5F4000"/>
+  <rect x="34" y="22" width="4" height="12" rx="2" fill="#5F4000"/>
+  <text x="50" y="35" fill="#3A2800" font-size="24" font-weight="800" font-family="Pretendard, SUIT, sans-serif">득근둑근</text>
+</svg>

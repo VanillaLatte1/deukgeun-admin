@@ -1,0 +1,8 @@
+﻿<svg width="360" height="90" viewBox="0 0 360 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="360" height="90" rx="16" fill="#111111"/>
+  <circle cx="45" cy="45" r="24" fill="#FFB300"/>
+  <path d="M31 45h28" stroke="#201500" stroke-width="6" stroke-linecap="round"/>
+  <path d="M27 39v12" stroke="#201500" stroke-width="6" stroke-linecap="round"/>
+  <path d="M63 39v12" stroke="#201500" stroke-width="6" stroke-linecap="round"/>
+  <text x="82" y="56" fill="#FFB300" font-size="38" font-weight="800" font-family="Pretendard, SUIT, sans-serif">득근둑근</text>
+</svg>
