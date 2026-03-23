@@ -1,65 +1,71 @@
 # Workout Admin Backoffice
 
-MVP backoffice for workout club admins.
+운동 모임 운영진을 위한 백오피스입니다.
 
-## Features
-- Admin login with a shared dashboard key
-- Member registration
-- Weekly goal setup by member
-- Workout record registration with proof images
-- Weekly dashboard for progress tracking
+## 주요 기능
+- 운영진 로그인
+- 회원 등록 및 수정
+- 회원별 주간 목표 관리
+- 운동 기록 등록
+- 주간 진행 현황 확인
 
-## Tech Stack
-- Next.js (App Router)
-- Supabase (Postgres + Storage)
+## 기술 스택
+- Next.js App Router
+- Supabase
+- Vercel
 
-## 1) Environment Variables
-Copy `.env.example` and create `.env`.
+## 환경 변수
+프로젝트 루트의 `.env` 파일에 아래 값을 설정합니다.
 
-Required values:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `ADMIN_DASHBOARD_KEY`
 
-## 2) Supabase SQL
-Run the following file in the Supabase SQL Editor:
+예시 파일:
+- `.env.example`
+
+## DB 설정
+Supabase SQL Editor에서 아래 파일들을 실행합니다.
 
 - `supabase/schema.sql`
+- `sql/admin_accounts.sql`
 
-This creates:
-- `members`
-- `weekly_goals`
-- `workout_sessions`
-- Storage bucket: `workout-proofs`
+`admin_accounts` 테이블에 로그인 가능한 운영진 계정이 저장됩니다.
 
-## 3) Local Development
+## 로컬 실행
+의존성 설치:
+
+```bash
+npm install
+```
+
+개발 서버 실행:
+
 ```bash
 npm run dev
 ```
 
-Open:
+접속 주소:
 - `http://localhost:3000`
 - `http://localhost:3000/login`
 
-## 4) Deployment
-See the full deployment guide here:
+## 배포
+자세한 절차는 아래 문서를 참고하세요.
 
 - [docs/deployment-guide.md](./docs/deployment-guide.md)
 
-Quick production deploy:
+빠른 배포:
 
 ```powershell
 npm run deploy:prod
 ```
 
-Deploy and assign an alias:
+별칭까지 함께 연결:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\deploy-vercel.ps1 -Alias deukgeun-admin.vercel.app
 ```
 
-## Security Notes
-- `ADMIN_DASHBOARD_KEY` is the shared admin login key.
-- `SUPABASE_SERVICE_ROLE_KEY` is server-only and must never be exposed to the client.
-- If you need per-admin permissions later, migrate to Supabase Auth + RBAC.
+## 운영 참고
+- 운영진 로그인 정보는 환경 변수가 아니라 `admin_accounts` 테이블에서 관리합니다.
+- `SUPABASE_SERVICE_ROLE_KEY`는 서버 전용 비밀값이므로 클라이언트에 노출되면 안 됩니다.

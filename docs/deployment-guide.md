@@ -1,157 +1,157 @@
-# Deployment Guide
+# 배포 가이드
 
-This document explains the standard workflow for local development and Vercel deployment.
+이 문서는 로컬에서 작업한 내용을 Vercel에 배포하는 기본 흐름을 정리한 문서입니다.
 
-## 1. Prerequisites
+## 1. 사전 준비
 
-Required tools:
+필수 도구:
 - Node.js / npm
-- Vercel account
+- Vercel 계정
 - Vercel CLI
 
-Required local environment variables in `.env`:
+필수 환경 변수:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `ADMIN_DASHBOARD_KEY`
 
-## 2. Local Development Flow
+로그인 계정 정보는 환경 변수가 아니라 DB의 `admin_accounts` 테이블에서 관리합니다.
 
-Install dependencies:
+## 2. 로컬 개발
+
+의존성 설치:
 
 ```powershell
 npm install
 ```
 
-Run the dev server:
+개발 서버 실행:
 
 ```powershell
 npm run dev
 ```
 
-Open:
+확인 주소:
 - `http://localhost:3000`
 - `http://localhost:3000/login`
 
-Check the production build before deploying:
+배포 전 빌드 확인:
 
 ```powershell
 npm run build
 ```
 
-Optional validation:
+선택 점검:
 
 ```powershell
 npm run lint
 ```
 
-## 3. First-Time Vercel Setup
+## 3. Vercel 최초 설정
 
-Login once:
+로그인:
 
 ```powershell
 npx vercel login
 ```
 
-Link this folder to a Vercel project:
+프로젝트 연결:
 
 ```powershell
 npx vercel link
 ```
 
-After linking, `.vercel/project.json` should exist.
+연결이 끝나면 `.vercel/project.json` 파일이 생성됩니다.
 
-## 4. Vercel Environment Variables
+## 4. Vercel 환경 변수 설정
 
-List current variables:
+현재 등록된 값 확인:
 
 ```powershell
 npx vercel env ls
 ```
 
-Add required production variables:
+필수 환경 변수 등록:
 
 ```powershell
 npx vercel env add NEXT_PUBLIC_SUPABASE_URL production
 npx vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production
 npx vercel env add SUPABASE_SERVICE_ROLE_KEY production
-npx vercel env add ADMIN_DASHBOARD_KEY production
 ```
 
-Update a value:
+값 변경 시:
 
 ```powershell
-npx vercel env rm ADMIN_DASHBOARD_KEY production
-npx vercel env add ADMIN_DASHBOARD_KEY production
+npx vercel env rm SUPABASE_SERVICE_ROLE_KEY production
+npx vercel env add SUPABASE_SERVICE_ROLE_KEY production
 ```
 
-Notes:
-- `NEXT_PUBLIC_*` values may be visible in the browser.
-- `SUPABASE_SERVICE_ROLE_KEY` must remain server-only.
+주의:
+- `NEXT_PUBLIC_*` 값은 브라우저에서 노출될 수 있습니다.
+- `SUPABASE_SERVICE_ROLE_KEY`는 서버 전용 값입니다.
 
-## 5. Production Deployment
+## 5. 프로덕션 배포
 
-Direct deploy:
+직접 배포:
 
 ```powershell
 npx vercel deploy --prod --yes
 ```
 
-Deploy with the project script:
+배포 스크립트 사용:
 
 ```powershell
 npm run deploy:prod
 ```
 
-Deploy and assign an alias:
+별칭까지 같이 연결:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\deploy-vercel.ps1 -Alias deukgeun-admin.vercel.app
 ```
 
-## 6. Deploy Script Behavior
+## 6. 배포 스크립트 동작
 
-`scripts/deploy-vercel.ps1` does the following:
+`scripts/deploy-vercel.ps1`는 아래 순서로 동작합니다.
 
-1. Checks that `.env` exists
-2. Runs `npm run build`
-3. Runs `npx vercel deploy --prod --yes`
-4. Optionally assigns an alias if `-Alias` is provided
+1. `.env` 파일 존재 여부 확인
+2. `npm run build` 실행
+3. `npx vercel deploy --prod --yes` 실행
+4. `-Alias` 값이 있으면 alias 연결
 
-This script does not auto-sync Vercel environment variables.
-Make sure these are already done:
+이 스크립트는 Vercel 환경 변수를 자동 등록하지 않습니다.
+아래 작업은 먼저 끝나 있어야 합니다.
 
 - `npx vercel login`
 - `npx vercel link`
 - `npx vercel env add ...`
 
-## 7. Release Checklist
+## 7. 배포 체크리스트
 
-Before deploy:
-- Confirm `.env` is up to date
-- Confirm `npm run build` passes
-- Confirm Vercel production env vars are correct
+배포 전:
+- `.env` 값이 최신인지 확인
+- `npm run build` 성공 확인
+- Vercel production 환경 변수가 최신인지 확인
 
-After deploy:
-- Open the production URL
-- Test `/login`
-- Check major pages and core flows
+배포 후:
+- 운영 URL 접속 확인
+- `/login` 로그인 확인
+- 주요 화면 동작 확인
 
-## 8. Alias Management
+## 8. Alias 관리
 
-Assign an alias:
+alias 연결:
 
 ```powershell
 npx vercel alias set <deployment-url> deukgeun-admin.vercel.app
 ```
 
-List aliases:
+alias 목록:
 
 ```powershell
 npx vercel alias list
 ```
 
-Remove an alias:
+alias 제거:
 
 ```powershell
 npx vercel alias remove <alias-domain> --yes
