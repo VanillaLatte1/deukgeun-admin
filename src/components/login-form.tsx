@@ -24,11 +24,23 @@ export function LoginForm({ hasError }: LoginFormProps) {
         <section className="login-credentials" aria-label="로그인 계정 정보">
           <label className="login-field">
             관리자 아이디
-            <input name="admin_id" type="text" required autoComplete="username" />
+            <input
+              name="admin_id"
+              type="text"
+              required
+              autoComplete="username"
+              placeholder="아이디를 입력하세요."
+            />
           </label>
           <label className="login-field">
             비밀번호
-            <input name="password" type="password" required autoComplete="current-password" />
+            <input
+              name="password"
+              type="password"
+              required
+              autoComplete="current-password"
+              placeholder="비밀번호를 입력하세요."
+            />
           </label>
           <button className="primary-btn" type="submit">
             로그인

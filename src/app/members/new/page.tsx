@@ -52,7 +52,7 @@ export default async function NewMemberPage() {
             ]}
           />
           <label>
-            목표 시간(분)
+            기본 운동 시간(분)
             <input
               type="number"
               min={0}

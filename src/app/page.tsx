@@ -15,6 +15,7 @@ import { SupabaseRequiredPanel } from "@/components/supabase-required-panel";
 import { COMMUNITY_START_WEEK, getCurrentWeekStart, getDashboardData } from "@/lib/data";
 import { getProgressStatus, statusLabel, type ProgressStatus } from "@/lib/progress";
 import { isSupabaseReady } from "@/lib/supabase-server";
+import { getWorkoutPolicy } from "@/lib/workout-policy";
 
 type SortKey = "name_asc" | "name_desc" | "target_desc" | "done_desc";
 
@@ -245,9 +246,9 @@ export default async function Home({ searchParams }: HomeProps) {
               <tr>
                 <th>회원</th>
                 <th>목표 회차</th>
-                <th>달성 회차</th>
-                <th>목표(분)</th>
-                <th>달성(분)</th>
+                <th>완료 회차</th>
+                <th>기본 운동 시간(분)</th>
+                <th>누적 운동 시간(분)</th>
                 <th>진행 상태</th>
               </tr>
             </thead>
@@ -288,9 +289,7 @@ export default async function Home({ searchParams }: HomeProps) {
                   <strong>{completeCount}명</strong>
                 </div>
                 <p className="dashboard-status-copy">
-                  {completeMembers.length > 0
-                    ? completeMembers.join(", ")
-                    : "해당 회원이 없습니다."}
+                  {completeMembers.length > 0 ? completeMembers.join(", ") : "해당 회원이 없습니다."}
                 </p>
               </div>
               <div className="dashboard-status-card">
@@ -318,8 +317,11 @@ export default async function Home({ searchParams }: HomeProps) {
             </div>
             <div className="recent-compact dashboard-recent-list">
               {recentCompact.map((workout) => {
+                const policy = getWorkoutPolicy(workout.exercise_type);
                 const status: ProgressStatus =
-                  workout.duration_minutes > 0 ? "complete" : "in_progress";
+                  workout.duration_minutes >= policy.minimumValidMinutes
+                    ? "complete"
+                    : "in_progress";
                 return (
                   <div className="recent-compact-item dashboard-recent-item" key={workout.id}>
                     <p className="recent-compact-top">

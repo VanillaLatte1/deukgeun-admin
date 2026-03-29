@@ -1,7 +1,11 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 
 import AppChrome from "@/components/app-chrome";
 import "./globals.css";
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "득근둑근 Backoffice",
@@ -14,7 +18,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
+    <html lang="ko" className={cn("font-sans", geist.variable)}>
       <body>
         <AppChrome>{children}</AppChrome>
       </body>

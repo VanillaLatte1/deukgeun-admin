@@ -13,9 +13,10 @@ type MemberRow = {
 
 type MembersTableProps = {
   members: MemberRow[];
+  onSelectMember?: (memberId: string) => void;
 };
 
-export function MembersTable({ members }: MembersTableProps) {
+export function MembersTable({ members, onSelectMember }: MembersTableProps) {
   const router = useRouter();
 
   return (
@@ -25,7 +26,7 @@ export function MembersTable({ members }: MembersTableProps) {
           <th>이름</th>
           <th>성별</th>
           <th>목표 회차</th>
-          <th>목표 시간(분)</th>
+          <th>기본 운동 시간(분)</th>
           <th>등록일</th>
         </tr>
       </thead>
@@ -34,7 +35,9 @@ export function MembersTable({ members }: MembersTableProps) {
           <tr
             key={member.id}
             className="clickable-row"
-            onClick={() => router.push(`/members/${member.id}/edit`)}
+            onClick={() =>
+              onSelectMember ? onSelectMember(member.id) : router.push(`/members/${member.id}/edit`)
+            }
           >
             <td>{member.name}</td>
             <td>{member.genderLabel}</td>

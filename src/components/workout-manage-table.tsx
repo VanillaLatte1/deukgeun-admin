@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -12,6 +12,11 @@ import { FileInputField } from "@/components/file-input-field";
 import { Modal } from "@/components/modal";
 import type { WorkoutSession } from "@/lib/data";
 import { statusLabel, type ProgressStatus } from "@/lib/progress";
+import {
+  getWorkoutPolicy,
+  WORKOUT_TYPE_GENERAL,
+  WORKOUT_TYPE_RUNNING,
+} from "@/lib/workout-policy";
 
 type WorkoutManageTableProps = {
   workouts: WorkoutSession[];
@@ -30,6 +35,7 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
   const [isDeleting, startDeleteTransition] = useTransition();
   const [showStartUploader, setShowStartUploader] = useState(false);
   const [showEndUploader, setShowEndUploader] = useState(false);
+  const [editingExerciseType, setEditingExerciseType] = useState(WORKOUT_TYPE_GENERAL);
 
   const [updateState, updateAction, updatePending] = useActionState(
     updateWorkoutSession,
@@ -50,6 +56,17 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
 
   const editingWorkout = workouts.find((item) => item.id === editingId) ?? null;
 
+  useEffect(() => {
+    if (editingWorkout) {
+      setEditingExerciseType(editingWorkout.exercise_type);
+    }
+  }, [editingWorkout]);
+
+  const editingPolicy = useMemo(
+    () => getWorkoutPolicy(editingExerciseType),
+    [editingExerciseType],
+  );
+
   return (
     <>
       <table className="table">
@@ -59,6 +76,7 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
             <th>회원</th>
             <th>운동일</th>
             <th>회차</th>
+            <th>종류</th>
             <th>시간(분)</th>
             <th>진행 상태</th>
             <th>시작 이미지</th>
@@ -68,8 +86,9 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
         </thead>
         <tbody>
           {workouts.map((workout) => {
+            const policy = getWorkoutPolicy(workout.exercise_type);
             const status: ProgressStatus =
-              workout.duration_minutes > 0 ? "complete" : "in_progress";
+              workout.duration_minutes >= policy.minimumValidMinutes ? "complete" : "in_progress";
 
             return (
               <tr key={workout.id}>
@@ -77,12 +96,13 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
                 <td>{workout.members?.name ?? "-"}</td>
                 <td>{workout.workout_date}</td>
                 <td>{workout.session_no}</td>
+                <td>{policy.label}</td>
                 <td>{workout.duration_minutes}</td>
                 <td>
                   <span className={`badge status-${status}`}>{statusLabel(status)}</span>
                 </td>
                 <td className="path-cell">{workout.start_image_path}</td>
-                <td className="path-cell">{workout.end_image_path}</td>
+                <td className="path-cell">{workout.end_image_path ?? "-"}</td>
                 <td>
                   <div className="row-actions">
                     <button
@@ -113,7 +133,7 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
       <Modal
         open={Boolean(editingWorkout) && !updateState.ok}
         title="인증 수정"
-        description="운동 날짜, 회차, 시간, 메모를 수정할 수 있으며 시작/종료 이미지를 교체할 수 있습니다."
+        description="운동 종류에 따라 시간 기준과 필요한 인증 이미지 수가 달라집니다."
         onClose={() => setEditingId(null)}
         size="lg"
         showDefaultActions={false}
@@ -144,11 +164,29 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
             </label>
 
             <label>
+              운동 종류
+              <select
+                name="exercise_type"
+                value={editingExerciseType}
+                onChange={(event) =>
+                  setEditingExerciseType(
+                    event.target.value === WORKOUT_TYPE_RUNNING
+                      ? WORKOUT_TYPE_RUNNING
+                      : WORKOUT_TYPE_GENERAL,
+                  )
+                }
+              >
+                <option value={WORKOUT_TYPE_GENERAL}>일반 운동</option>
+                <option value={WORKOUT_TYPE_RUNNING}>러닝</option>
+              </select>
+            </label>
+
+            <label>
               운동 시간(분)
               <input
                 type="number"
                 name="duration_minutes"
-                min={0}
+                min={editingPolicy.minimumValidMinutes}
                 defaultValue={editingWorkout.duration_minutes}
                 required
               />
@@ -162,7 +200,7 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
             <div className="edit-proof-preview span-2">
               <div className="edit-proof-card">
                 <div className="edit-proof-head">
-                  <strong>시작 이미지(현재)</strong>
+                  <strong>{editingPolicy.requiredImageCount === 1 ? "인증 이미지(현재)" : "시작 이미지(현재)"}</strong>
                   <button
                     type="button"
                     className="ghost-btn"
@@ -177,31 +215,45 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
                   <span className="muted">이미지를 불러올 수 없습니다.</span>
                 )}
                 {showStartUploader ? (
-                  <FileInputField label="시작 이미지 업로드" name="start_image" />
+                  <FileInputField
+                    label={editingPolicy.requiredImageCount === 1 ? "인증 이미지 업로드" : "시작 이미지 업로드"}
+                    name="start_image"
+                  />
                 ) : null}
               </div>
 
-              <div className="edit-proof-card">
-                <div className="edit-proof-head">
-                  <strong>종료 이미지(현재)</strong>
-                  <button
-                    type="button"
-                    className="ghost-btn"
-                    onClick={() => setShowEndUploader((prev) => !prev)}
-                  >
-                    변경
-                  </button>
+              {editingPolicy.requiredImageCount === 2 ? (
+                <div className="edit-proof-card">
+                  <div className="edit-proof-head">
+                    <strong>종료 이미지(현재)</strong>
+                    <button
+                      type="button"
+                      className="ghost-btn"
+                      onClick={() => setShowEndUploader((prev) => !prev)}
+                    >
+                      변경
+                    </button>
+                  </div>
+                  {editingWorkout.end_image_url ? (
+                    <img src={editingWorkout.end_image_url} alt="종료 인증 이미지" loading="lazy" />
+                  ) : (
+                    <span className="muted">이미지를 불러올 수 없습니다.</span>
+                  )}
+                  {showEndUploader ? <FileInputField label="종료 이미지 업로드" name="end_image" /> : null}
                 </div>
-                {editingWorkout.end_image_url ? (
-                  <img src={editingWorkout.end_image_url} alt="종료 인증 이미지" loading="lazy" />
-                ) : (
-                  <span className="muted">이미지를 불러올 수 없습니다.</span>
-                )}
-                {showEndUploader ? <FileInputField label="종료 이미지 업로드" name="end_image" /> : null}
-              </div>
+              ) : (
+                <div className="edit-proof-card">
+                  <div className="edit-proof-head">
+                    <strong>러닝 안내</strong>
+                  </div>
+                  <span className="muted">러닝은 사진 1장만 유지하며, 저장 시 기존 종료 이미지는 제거됩니다.</span>
+                </div>
+              )}
             </div>
 
-            <p className="muted span-2">변경 버튼을 눌러 이미지를 선택하지 않으면 기존 이미지가 유지됩니다.</p>
+            <p className="muted span-2">
+              변경 버튼을 눌러 이미지를 선택하지 않으면 기존 이미지가 유지됩니다. 러닝은 30분 이상부터 인정됩니다.
+            </p>
 
             <button className="primary-btn" type="submit" disabled={updatePending}>
               {updatePending ? "수정 중..." : "수정"}

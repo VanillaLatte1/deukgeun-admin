@@ -6,9 +6,15 @@ type FileInputFieldProps = {
   label: string;
   name: string;
   required?: boolean;
+  onFileChange?: (file: File | null) => void;
 };
 
-export function FileInputField({ label, name, required }: FileInputFieldProps) {
+export function FileInputField({
+  label,
+  name,
+  required,
+  onFileChange,
+}: FileInputFieldProps) {
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState("선택된 파일 없음");
@@ -25,6 +31,7 @@ export function FileInputField({ label, name, required }: FileInputFieldProps) {
     if (!file) {
       input.value = "";
       setFileName("선택된 파일 없음");
+      onFileChange?.(null);
       return;
     }
 
@@ -32,6 +39,7 @@ export function FileInputField({ label, name, required }: FileInputFieldProps) {
     dataTransfer.items.add(file);
     input.files = dataTransfer.files;
     setFileName(file.name);
+    onFileChange?.(file);
   };
 
   return (

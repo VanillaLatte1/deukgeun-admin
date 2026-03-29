@@ -1,9 +1,11 @@
-﻿"use server";
+"use server";
 
 import { revalidatePath } from "next/cache";
 
 import { getCurrentWeekStart } from "@/lib/data";
+import { inferWorkoutDurationFromImages } from "@/lib/workout-ocr";
 import { createSupabaseAdmin } from "@/lib/supabase-server";
+import { getWorkoutPolicy, toWorkoutType } from "@/lib/workout-policy";
 
 export type WorkoutActionState = {
   ok: boolean;
@@ -61,6 +63,67 @@ function revalidateWorkoutPages() {
   revalidatePath("/workout-records");
 }
 
+function validateWorkoutInput(
+  exerciseTypeRaw: string,
+  durationMinutes: number,
+  startImage: File | null,
+  endImage: File | null,
+) {
+  const exerciseType = toWorkoutType(exerciseTypeRaw);
+  const policy = getWorkoutPolicy(exerciseType);
+  const hasStartImage = Boolean(startImage && startImage.size > 0);
+  const hasEndImage = Boolean(endImage && endImage.size > 0);
+
+  if (!Number.isFinite(durationMinutes) || durationMinutes < policy.minimumValidMinutes) {
+    return failure(`${policy.label}은(는) 최소 ${policy.minimumValidMinutes}분 이상이어야 합니다.`);
+  }
+
+  if (!hasStartImage) {
+    return failure("인증 이미지를 첨부하세요.");
+  }
+
+  if (policy.requiredImageCount === 2 && !hasEndImage) {
+    return failure("일반 운동은 시작/종료 이미지를 모두 첨부해야 합니다.");
+  }
+
+  return null;
+}
+
+async function resolveDurationMinutes(
+  exerciseType: string,
+  workoutDate: string,
+  inputDurationMinutes: number,
+  startImage: File | null,
+  endImage: File | null,
+) {
+  const policy = getWorkoutPolicy(exerciseType);
+
+  if (
+    policy.requiredImageCount === 2 &&
+    startImage &&
+    startImage.size > 0 &&
+    endImage &&
+    endImage.size > 0
+  ) {
+    try {
+      const ocrResult = await inferWorkoutDurationFromImages(startImage, endImage, workoutDate);
+      if (ocrResult) {
+        return {
+          durationMinutes: ocrResult.durationMinutes,
+          ocrCalculated: true,
+        };
+      }
+    } catch {
+      // OCR failure falls back to the manually entered duration.
+    }
+  }
+
+  return {
+    durationMinutes: inputDurationMinutes,
+    ocrCalculated: false,
+  };
+}
+
 export async function createWorkoutSession(
   _prevState: WorkoutActionState,
   formData: FormData,
@@ -69,7 +132,8 @@ export async function createWorkoutSession(
     const memberId = String(formData.get("member_id") ?? "").trim();
     const workoutDate = String(formData.get("workout_date") ?? "").trim();
     const sessionNo = Number(formData.get("session_no") ?? 1);
-    const durationMinutes = Number(formData.get("duration_minutes") ?? 0);
+    const exerciseType = toWorkoutType(String(formData.get("exercise_type") ?? ""));
+    const inputDurationMinutes = Number(formData.get("duration_minutes") ?? 0);
     const notes = String(formData.get("notes") ?? "").trim();
     const startImage = formData.get("start_image") as File | null;
     const endImage = formData.get("end_image") as File | null;
@@ -78,8 +142,17 @@ export async function createWorkoutSession(
       return failure("회원과 운동 날짜는 필수입니다.");
     }
 
-    if (!startImage || startImage.size === 0 || !endImage || endImage.size === 0) {
-      return failure("시작/종료 이미지를 모두 첨부하세요.");
+    const { durationMinutes, ocrCalculated } = await resolveDurationMinutes(
+      exerciseType,
+      workoutDate,
+      inputDurationMinutes,
+      startImage,
+      endImage,
+    );
+
+    const inputError = validateWorkoutInput(exerciseType, durationMinutes, startImage, endImage);
+    if (inputError) {
+      return inputError;
     }
 
     const supabase = createSupabaseAdmin();
@@ -105,14 +178,18 @@ export async function createWorkoutSession(
     }
 
     const bucket = "workout-proofs";
-    const [startPath, endPath] = await Promise.all([
-      uploadImage(bucket, memberId, workoutDate, "start", startImage),
-      uploadImage(bucket, memberId, workoutDate, "end", endImage),
-    ]);
+    const policy = getWorkoutPolicy(exerciseType);
+    const startPath = await uploadImage(bucket, memberId, workoutDate, "start", startImage as File);
+    const endPath =
+      policy.requiredImageCount === 2
+        ? await uploadImage(bucket, memberId, workoutDate, "end", endImage as File)
+        : null;
+
     const { error } = await supabase.from("workout_sessions").insert({
       member_id: memberId,
       workout_date: workoutDate,
       session_no: sessionNo,
+      exercise_type: exerciseType,
       duration_minutes: durationMinutes,
       start_image_path: startPath,
       end_image_path: endPath,
@@ -125,7 +202,11 @@ export async function createWorkoutSession(
     }
 
     revalidateWorkoutPages();
-    return success("인증 저장이 완료되었습니다.");
+    return success(
+      ocrCalculated
+        ? `인증 저장이 완료되었습니다. 운동 시간은 OCR로 ${durationMinutes}분 자동 계산되었습니다.`
+        : "인증 저장이 완료되었습니다.",
+    );
   } catch (error) {
     return failure(error instanceof Error ? error.message : "인증 저장 중 오류가 발생했습니다.");
   }
@@ -139,19 +220,20 @@ export async function updateWorkoutSession(
     const id = String(formData.get("id") ?? "").trim();
     const workoutDate = String(formData.get("workout_date") ?? "").trim();
     const sessionNo = Number(formData.get("session_no") ?? 1);
-    const durationMinutes = Number(formData.get("duration_minutes") ?? 0);
+    const exerciseType = toWorkoutType(String(formData.get("exercise_type") ?? ""));
+    const inputDurationMinutes = Number(formData.get("duration_minutes") ?? 0);
     const notesRaw = String(formData.get("notes") ?? "").trim();
     const startImage = formData.get("start_image") as File | null;
     const endImage = formData.get("end_image") as File | null;
 
-    if (!id || !workoutDate || !Number.isFinite(sessionNo) || !Number.isFinite(durationMinutes)) {
+    if (!id || !workoutDate || !Number.isFinite(sessionNo) || !Number.isFinite(inputDurationMinutes)) {
       return failure("수정 값이 올바르지 않습니다.");
     }
 
     const supabase = createSupabaseAdmin();
     const { data: session, error: sessionError } = await supabase
       .from("workout_sessions")
-      .select("member_id, start_image_path, end_image_path")
+      .select("member_id, exercise_type, start_image_path, end_image_path")
       .eq("id", id)
       .single();
 
@@ -159,16 +241,43 @@ export async function updateWorkoutSession(
       throw sessionError ?? new Error("수정할 인증 내역을 찾을 수 없습니다.");
     }
 
+    const policy = getWorkoutPolicy(exerciseType);
     const hasStartImage = Boolean(startImage && startImage.size > 0);
     const hasEndImage = Boolean(endImage && endImage.size > 0);
+    const nextStartCandidate = hasStartImage ? (startImage as File) : null;
+    const nextEndCandidate = hasEndImage ? (endImage as File) : null;
+    const hasStartProofAfterUpdate = Boolean(session.start_image_path || nextStartCandidate);
+    const hasEndProofAfterUpdate =
+      policy.requiredImageCount === 1 ? true : Boolean(session.end_image_path || nextEndCandidate);
+
+    const { durationMinutes, ocrCalculated } = await resolveDurationMinutes(
+      exerciseType,
+      workoutDate,
+      inputDurationMinutes,
+      nextStartCandidate,
+      nextEndCandidate,
+    );
+
+    if (durationMinutes < policy.minimumValidMinutes) {
+      return failure(`${policy.label}은(는) 최소 ${policy.minimumValidMinutes}분 이상이어야 합니다.`);
+    }
+
+    if (!hasStartProofAfterUpdate) {
+      return failure("인증 이미지를 첨부하세요.");
+    }
+
+    if (!hasEndProofAfterUpdate) {
+      return failure("일반 운동은 시작/종료 이미지를 모두 첨부해야 합니다.");
+    }
+
     const bucket = "workout-proofs";
 
     const [nextStartPath, nextEndPath] = await Promise.all([
-      hasStartImage
-        ? uploadImage(bucket, session.member_id, workoutDate, "start", startImage as File)
+      nextStartCandidate
+        ? uploadImage(bucket, session.member_id, workoutDate, "start", nextStartCandidate)
         : Promise.resolve<string | null>(null),
-      hasEndImage
-        ? uploadImage(bucket, session.member_id, workoutDate, "end", endImage as File)
+      policy.requiredImageCount === 2 && nextEndCandidate
+        ? uploadImage(bucket, session.member_id, workoutDate, "end", nextEndCandidate)
         : Promise.resolve<string | null>(null),
     ]);
 
@@ -177,10 +286,15 @@ export async function updateWorkoutSession(
       .update({
         workout_date: workoutDate,
         session_no: Math.max(1, Math.min(5, sessionNo)),
+        exercise_type: exerciseType,
         duration_minutes: Math.max(0, durationMinutes),
         notes: notesRaw || null,
         ...(nextStartPath ? { start_image_path: nextStartPath } : {}),
-        ...(nextEndPath ? { end_image_path: nextEndPath } : {}),
+        ...(policy.requiredImageCount === 2
+          ? nextEndPath
+            ? { end_image_path: nextEndPath }
+            : {}
+          : { end_image_path: null }),
       })
       .eq("id", id);
 
@@ -192,6 +306,9 @@ export async function updateWorkoutSession(
     if (nextStartPath && session.start_image_path) {
       removablePaths.push(session.start_image_path);
     }
+    if (policy.requiredImageCount === 1 && session.end_image_path) {
+      removablePaths.push(session.end_image_path);
+    }
     if (nextEndPath && session.end_image_path) {
       removablePaths.push(session.end_image_path);
     }
@@ -201,7 +318,11 @@ export async function updateWorkoutSession(
     }
 
     revalidateWorkoutPages();
-    return success("인증 정보가 수정되었습니다.");
+    return success(
+      ocrCalculated
+        ? `인증 정보가 수정되었습니다. 운동 시간은 OCR로 ${durationMinutes}분 자동 계산되었습니다.`
+        : "인증 정보가 수정되었습니다.",
+    );
   } catch (error) {
     return failure(error instanceof Error ? error.message : "인증 수정 중 오류가 발생했습니다.");
   }

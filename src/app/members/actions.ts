@@ -5,6 +5,26 @@ import { revalidatePath } from "next/cache";
 import { COMMUNITY_START_WEEK } from "@/lib/data";
 import { createSupabaseAdmin } from "@/lib/supabase-server";
 
+export type MemberActionState = {
+  ok: boolean;
+  message: string;
+  submittedAt: number;
+};
+
+const initialMemberActionState: MemberActionState = {
+  ok: false,
+  message: "",
+  submittedAt: 0,
+};
+
+function memberSuccess(message: string): MemberActionState {
+  return { ok: true, message, submittedAt: Date.now() };
+}
+
+function memberFailure(message: string): MemberActionState {
+  return { ok: false, message, submittedAt: Date.now() };
+}
+
 export async function createMember(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const gender = String(formData.get("gender") ?? "").trim();
@@ -50,7 +70,7 @@ export async function createMemberWithGoal(formData: FormData) {
   }
 
   if (!Number.isFinite(targetMinutes) || targetMinutes < 0) {
-    throw new Error("목표 시간을 올바르게 입력하세요.");
+    throw new Error("기본 운동 시간을 올바르게 입력하세요.");
   }
 
   const supabase = createSupabaseAdmin();
@@ -137,7 +157,7 @@ export async function updateMemberWithGoal(formData: FormData) {
   }
 
   if (!Number.isFinite(targetMinutes) || targetMinutes < 0) {
-    throw new Error("목표 시간을 올바르게 입력하세요.");
+    throw new Error("기본 운동 시간을 올바르게 입력하세요.");
   }
 
   const supabase = createSupabaseAdmin();
@@ -173,6 +193,34 @@ export async function updateMemberWithGoal(formData: FormData) {
   revalidatePath("/members");
   revalidatePath(`/members/${memberId}/edit`);
   revalidatePath("/");
+}
+
+export async function createMemberWithGoalAction(
+  _prevState: MemberActionState = initialMemberActionState,
+  formData: FormData,
+): Promise<MemberActionState> {
+  try {
+    await createMemberWithGoal(formData);
+    return memberSuccess("회원 등록이 완료되었습니다.");
+  } catch (error) {
+    return memberFailure(
+      error instanceof Error ? error.message : "회원 등록 중 오류가 발생했습니다.",
+    );
+  }
+}
+
+export async function updateMemberWithGoalAction(
+  _prevState: MemberActionState = initialMemberActionState,
+  formData: FormData,
+): Promise<MemberActionState> {
+  try {
+    await updateMemberWithGoal(formData);
+    return memberSuccess("회원 정보가 저장되었습니다.");
+  } catch (error) {
+    return memberFailure(
+      error instanceof Error ? error.message : "회원 저장 중 오류가 발생했습니다.",
+    );
+  }
 }
 
 

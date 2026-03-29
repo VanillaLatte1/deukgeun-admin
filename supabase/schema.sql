@@ -23,9 +23,10 @@ create table if not exists public.workout_sessions (
   member_id uuid not null references public.members(id) on delete cascade,
   workout_date date not null,
   session_no integer not null check (session_no > 0),
+  exercise_type text not null default 'general',
   duration_minutes integer not null check (duration_minutes >= 0),
   start_image_path text not null,
-  end_image_path text not null,
+  end_image_path text,
   notes text,
   created_by text,
   created_at timestamptz not null default now()
@@ -71,5 +72,7 @@ with check (bucket_id = 'workout-proofs' and false);
 
 
 alter table public.members add column if not exists gender text;
+alter table public.workout_sessions add column if not exists exercise_type text not null default 'general';
+alter table public.workout_sessions alter column end_image_path drop not null;
 
 

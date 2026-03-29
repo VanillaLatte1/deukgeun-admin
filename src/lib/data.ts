@@ -1,4 +1,5 @@
-﻿import { createSupabaseAdmin } from "@/lib/supabase-server";
+import { createSupabaseAdmin } from "@/lib/supabase-server";
+import { toWorkoutType, type WorkoutType } from "@/lib/workout-policy";
 
 export const COMMUNITY_START_WEEK = "2026-02-01";
 
@@ -21,16 +22,18 @@ type WorkoutSessionRow = {
   member_id: string;
   workout_date: string;
   session_no: number;
+  exercise_type: string | null;
   duration_minutes: number;
   start_image_path: string;
-  end_image_path: string;
+  end_image_path: string | null;
   notes: string | null;
   created_at: string;
   members: { name: string } | { name: string }[] | null;
 };
 
-export type WorkoutSession = Omit<WorkoutSessionRow, "members"> & {
+export type WorkoutSession = Omit<WorkoutSessionRow, "members" | "exercise_type"> & {
   members: { name: string } | null;
+  exercise_type: WorkoutType;
   start_image_url: string | null;
   end_image_url: string | null;
 };
@@ -53,7 +56,7 @@ export function getCurrentWeekStart(baseDate = new Date()) {
   const d = new Date(baseDate);
   d.setHours(0, 0, 0, 0);
   const day = d.getDay();
-  d.setDate(d.getDate() - day); // Sunday start
+  d.setDate(d.getDate() - day);
   return toYmd(d);
 }
 
@@ -133,7 +136,7 @@ export async function listWorkoutsForWeek(weekStart: string, memberId?: string) 
   let query = supabase
     .from("workout_sessions")
     .select(
-      "id, member_id, workout_date, session_no, duration_minutes, start_image_path, end_image_path, notes, created_at, members(name)",
+      "id, member_id, workout_date, session_no, exercise_type, duration_minutes, start_image_path, end_image_path, notes, created_at, members(name)",
     )
     .gte("workout_date", range.from)
     .lt("workout_date", range.to)
@@ -150,7 +153,9 @@ export async function listWorkoutsForWeek(weekStart: string, memberId?: string) 
   }
 
   const rows = (data ?? []) as WorkoutSessionRow[];
-  const paths = rows.flatMap((row) => [row.start_image_path, row.end_image_path]);
+  const paths = rows.flatMap((row) =>
+    [row.start_image_path, row.end_image_path].filter((path): path is string => Boolean(path)),
+  );
 
   let signedMap = new Map<string, string>();
   if (paths.length > 0) {
@@ -172,9 +177,10 @@ export async function listWorkoutsForWeek(weekStart: string, memberId?: string) 
 
   return rows.map((row) => ({
     ...row,
+    exercise_type: toWorkoutType(row.exercise_type ?? ""),
     members: Array.isArray(row.members) ? (row.members[0] ?? null) : row.members,
     start_image_url: signedMap.get(row.start_image_path) ?? null,
-    end_image_url: signedMap.get(row.end_image_path) ?? null,
+    end_image_url: row.end_image_path ? signedMap.get(row.end_image_path) ?? null : null,
   }));
 }
 
@@ -234,5 +240,3 @@ export async function getDashboardData(weekStart: string) {
     recent: workouts.slice(0, 10),
   };
 }
-
-
