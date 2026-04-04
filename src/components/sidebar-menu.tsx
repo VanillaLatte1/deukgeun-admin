@@ -1,8 +1,11 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ClipboardCheck, ClipboardList, LayoutDashboard, UsersRound } from "lucide-react";
+
+import { SheetClose } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 
 const menus = [
   {
@@ -27,31 +30,65 @@ const menus = [
   },
 ];
 
-export default function SidebarMenu() {
+type SidebarMenuProps = {
+  className?: string;
+  itemClassName?: string;
+  showText?: boolean;
+  closeOnSelect?: boolean;
+};
+
+export default function SidebarMenu({
+  className,
+  itemClassName,
+  showText = true,
+  closeOnSelect = false,
+}: SidebarMenuProps) {
   const pathname = usePathname();
 
   return (
-    <nav className="menu-list">
+    <nav className={cn("menu-list", className)}>
       {menus.map((menu) => {
         const Icon = menu.icon;
         const isActive =
           pathname === menu.href ||
           (menu.href !== "/" && pathname.startsWith(menu.href));
+        const linkClassName = cn("menu-card", isActive && "active", itemClassName);
+        const linkBody = (
+          <>
+            <span className="menu-icon-wrap">
+              <Icon size={18} />
+            </span>
+            {showText ? (
+              <span className="menu-text" aria-hidden="true">
+                <span className="menu-title">{menu.title}</span>
+              </span>
+            ) : null}
+          </>
+        );
+
+        if (closeOnSelect) {
+          return (
+            <SheetClose
+              key={menu.href}
+              render={<Link href={menu.href} />}
+              className={linkClassName}
+              aria-label={menu.title}
+              title={menu.title}
+            >
+              {linkBody}
+            </SheetClose>
+          );
+        }
 
         return (
           <Link
             key={menu.href}
             href={menu.href}
-            className={`menu-card${isActive ? " active" : ""}`}
+            className={linkClassName}
             aria-label={menu.title}
             title={menu.title}
           >
-            <span className="menu-icon-wrap">
-              <Icon size={18} />
-            </span>
-            <span className="menu-text" aria-hidden="true">
-              <span className="menu-title">{menu.title}</span>
-            </span>
+            {linkBody}
           </Link>
         );
       })}

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { updateMemberWithGoal } from "@/app/members/actions";
 import { FormSelectField } from "@/components/form-select-field";
 import { SupabaseRequiredPanel } from "@/components/supabase-required-panel";
+import { Button } from "@/components/ui/button";
 import { getFixedGoalByMemberId, getMemberById } from "@/lib/data";
 import { isSupabaseReady } from "@/lib/supabase-server";
 
@@ -33,9 +34,9 @@ export default async function EditMemberPage({ params }: EditMemberPageProps) {
           <h2 className="title-with-icon">
             <PencilLine size={18} /> 회원 정보 수정
           </h2>
-          <Link href="/members" className="ghost-btn inline-btn">
+          <Button variant="outline" className="inline-btn" render={<Link href="/members" />}>
             <ArrowLeft size={16} /> 목록
-          </Link>
+          </Button>
         </div>
       </section>
 
@@ -78,9 +79,9 @@ export default async function EditMemberPage({ params }: EditMemberPageProps) {
               required
             />
           </label>
-          <button className="primary-btn" type="submit">
+          <Button type="submit">
             수정 저장
-          </button>
+          </Button>
         </form>
       </section>
     </div>

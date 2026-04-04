@@ -3,6 +3,7 @@ import { CalendarDays, ClipboardList } from "lucide-react";
 
 import { SupabaseRequiredPanel } from "@/components/supabase-required-panel";
 import { WorkoutManageTable } from "@/components/workout-manage-table";
+import { Button } from "@/components/ui/button";
 import {
   COMMUNITY_START_WEEK,
   getCurrentWeekStart,
@@ -121,9 +122,9 @@ export default async function WorkoutRecordsPage({ searchParams }: WorkoutRecord
                 </option>
               ))}
             </select>
-            <button type="submit" className="ghost-btn inline-btn">
+            <Button type="submit" variant="outline" className="inline-btn">
               검색
-            </button>
+            </Button>
           </form>
         </div>
         <WorkoutManageTable workouts={workouts} />

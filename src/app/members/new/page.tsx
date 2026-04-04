@@ -4,6 +4,7 @@ import { ArrowLeft, UserPlus } from "lucide-react";
 import { createMemberWithGoal } from "@/app/members/actions";
 import { FormSelectField } from "@/components/form-select-field";
 import { SupabaseRequiredPanel } from "@/components/supabase-required-panel";
+import { Button } from "@/components/ui/button";
 import { isSupabaseReady } from "@/lib/supabase-server";
 
 export default async function NewMemberPage() {
@@ -18,9 +19,9 @@ export default async function NewMemberPage() {
           <h2 className="title-with-icon">
             <UserPlus size={18} /> 회원 등록 및 목표 설정
           </h2>
-          <Link href="/members" className="ghost-btn inline-btn">
+          <Button variant="outline" className="inline-btn" render={<Link href="/members" />}>
             <ArrowLeft size={16} /> 목록
-          </Link>
+          </Button>
         </div>
       </section>
 
@@ -53,17 +54,11 @@ export default async function NewMemberPage() {
           />
           <label>
             기본 운동 시간(분)
-            <input
-              type="number"
-              min={0}
-              name="target_minutes"
-              defaultValue={120}
-              required
-            />
+            <input type="number" min={0} name="target_minutes" defaultValue={120} required />
           </label>
-          <button className="primary-btn" type="submit">
+          <Button type="submit">
             회원 추가
-          </button>
+          </Button>
         </form>
       </section>
     </div>

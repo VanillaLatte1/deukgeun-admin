@@ -1,7 +1,9 @@
-﻿"use client";
+"use client";
 
 import { X } from "lucide-react";
 import { type ReactNode } from "react";
+
+import { Button } from "@/components/ui/button";
 
 type ModalSize = "md" | "lg";
 
@@ -37,9 +39,9 @@ export function Modal({
       <div className={`modal-panel modal-panel-${size}`}>
         <div className="modal-head">
           <h3>{title}</h3>
-          <button className="modal-close" type="button" aria-label="닫기" onClick={onClose}>
+          <Button className="modal-close" type="button" aria-label="닫기" onClick={onClose} variant="ghost" size="icon-sm">
             <X size={18} />
-          </button>
+          </Button>
         </div>
 
         {description ? <p>{description}</p> : null}
@@ -47,16 +49,12 @@ export function Modal({
 
         {showDefaultActions ? (
           <div className="modal-actions">
-            <button className="modal-btn modal-btn-ghost" type="button" onClick={onClose}>
+            <Button variant="outline" type="button" onClick={onClose}>
               {cancelLabel}
-            </button>
-            <button
-              className="modal-btn modal-btn-primary"
-              type="button"
-              onClick={onConfirm ?? onClose}
-            >
+            </Button>
+            <Button type="button" onClick={onConfirm ?? onClose}>
               {confirmLabel}
-            </button>
+            </Button>
           </div>
         ) : null}
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, UsersRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -12,6 +12,7 @@ import {
 import { FormSelectField } from "@/components/form-select-field";
 import { MembersTable } from "@/components/members-table";
 import { Modal } from "@/components/modal";
+import { Button } from "@/components/ui/button";
 
 type MemberRow = {
   id: string;
@@ -84,10 +85,12 @@ export function MembersManager({ members }: MembersManagerProps) {
     <>
       <section className="panel panel-highlight">
         <div className="section-head members-form-head">
-          <h2 className="title-with-icon">회원 및 주간 목표 관리</h2>
-          <button type="button" className="primary-btn inline-btn" onClick={() => setCreateOpen(true)}>
+          <h2 className="title-with-icon">
+            <UsersRound size={18} /> 회원 및 주간 목표 관리
+          </h2>
+          <Button type="button" className="inline-btn" onClick={() => setCreateOpen(true)}>
             <Plus size={16} /> 등록
-          </button>
+          </Button>
         </div>
       </section>
 
@@ -140,9 +143,9 @@ export function MembersManager({ members }: MembersManagerProps) {
           {createState.message && !createState.ok ? (
             <p className="error span-4">{createState.message}</p>
           ) : null}
-          <button className="primary-btn" type="submit" disabled={createPending}>
+          <Button type="submit" disabled={createPending}>
             {createPending ? "등록 중..." : "등록"}
-          </button>
+          </Button>
         </form>
       </Modal>
 
@@ -200,9 +203,9 @@ export function MembersManager({ members }: MembersManagerProps) {
             {updateState.message && !updateState.ok ? (
               <p className="error span-4">{updateState.message}</p>
             ) : null}
-            <button className="primary-btn" type="submit" disabled={updatePending}>
+            <Button type="submit" disabled={updatePending}>
               {updatePending ? "저장 중..." : "저장"}
-            </button>
+            </Button>
           </form>
         ) : null}
       </Modal>
@@ -210,18 +213,17 @@ export function MembersManager({ members }: MembersManagerProps) {
       <Modal
         open={showSuccessModal}
         title="저장 완료"
-        description={latestSuccessState?.message ?? "저장이 완료되었습니다."}
+        description={latestSuccessState?.message ?? "작업이 완료되었습니다."}
         onClose={() => setDismissedAt(latestSuccessState?.submittedAt ?? 0)}
         showDefaultActions={false}
       >
         <div className="modal-actions">
-          <button
-            className="modal-btn modal-btn-primary"
+          <Button
             type="button"
             onClick={() => setDismissedAt(latestSuccessState?.submittedAt ?? 0)}
           >
             확인
-          </button>
+          </Button>
         </div>
       </Modal>
     </>

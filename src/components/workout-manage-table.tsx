@@ -10,6 +10,7 @@ import {
 } from "@/app/workouts/actions";
 import { FileInputField } from "@/components/file-input-field";
 import { Modal } from "@/components/modal";
+import { Button } from "@/components/ui/button";
 import type { WorkoutSession } from "@/lib/data";
 import { statusLabel, type ProgressStatus } from "@/lib/progress";
 import {
@@ -69,71 +70,73 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
 
   return (
     <>
-      <table className="table">
-        <thead>
-          <tr>
-            <th>등록시각</th>
-            <th>회원</th>
-            <th>운동일</th>
-            <th>회차</th>
-            <th>종류</th>
-            <th>시간(분)</th>
-            <th>진행 상태</th>
-            <th>시작 이미지</th>
-            <th>종료 이미지</th>
-            <th>관리</th>
-          </tr>
-        </thead>
-        <tbody>
-          {workouts.map((workout) => {
-            const policy = getWorkoutPolicy(workout.exercise_type);
-            const status: ProgressStatus =
-              workout.duration_minutes >= policy.minimumValidMinutes ? "complete" : "in_progress";
+      <div className="table-scroll table-scroll-wide">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>{"등록시각"}</th>
+              <th>{"회원"}</th>
+              <th>{"운동일"}</th>
+              <th>{"회차"}</th>
+              <th>{"종류"}</th>
+              <th>{"시간(분)"}</th>
+              <th>{"진행 상태"}</th>
+              <th>{"시작 이미지"}</th>
+              <th>{"종료 이미지"}</th>
+              <th>{"관리"}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {workouts.map((workout) => {
+              const policy = getWorkoutPolicy(workout.exercise_type);
+              const status: ProgressStatus =
+                workout.duration_minutes >= policy.minimumValidMinutes ? "complete" : "in_progress";
 
-            return (
-              <tr key={workout.id}>
-                <td>{new Date(workout.created_at).toLocaleString("ko-KR")}</td>
-                <td>{workout.members?.name ?? "-"}</td>
-                <td>{workout.workout_date}</td>
-                <td>{workout.session_no}</td>
-                <td>{policy.label}</td>
-                <td>{workout.duration_minutes}</td>
-                <td>
-                  <span className={`badge status-${status}`}>{statusLabel(status)}</span>
-                </td>
-                <td className="path-cell">{workout.start_image_path}</td>
-                <td className="path-cell">{workout.end_image_path ?? "-"}</td>
-                <td>
-                  <div className="row-actions">
-                    <button
-                      type="button"
-                      className="ghost-btn"
-                      onClick={() => setEditingId(workout.id)}
-                    >
-                      수정
-                    </button>
-                    <button
-                      type="button"
-                      className="ghost-btn"
-                      onClick={() => setDeleteTargetId(workout.id)}
-                    >
-                      삭제
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+              return (
+                <tr key={workout.id}>
+                  <td>{new Date(workout.created_at).toLocaleString("ko-KR")}</td>
+                  <td>{workout.members?.name ?? "-"}</td>
+                  <td>{workout.workout_date}</td>
+                  <td>{workout.session_no}</td>
+                  <td>{policy.label}</td>
+                  <td>{workout.duration_minutes}</td>
+                  <td>
+                    <span className={`badge status-${status}`}>{statusLabel(status)}</span>
+                  </td>
+                  <td className="path-cell">{workout.start_image_path}</td>
+                  <td className="path-cell">{workout.end_image_path ?? "-"}</td>
+                  <td>
+                    <div className="row-actions">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setEditingId(workout.id)}
+                      >
+                        {"수정"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setDeleteTargetId(workout.id)}
+                      >
+                        {"삭제"}
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       {updateState.message && !updateState.ok ? <p className="error">{updateState.message}</p> : null}
       {deleteState.message && !deleteState.ok ? <p className="error">{deleteState.message}</p> : null}
 
       <Modal
         open={Boolean(editingWorkout) && !updateState.ok}
-        title="인증 수정"
-        description="운동 종류에 따라 시간 기준과 필요한 인증 이미지 수가 달라집니다."
+        title={"인증 수정"}
+        description={"운동 종류에 따라 시간 기준과 필요한 인증 이미지 수가 달라집니다."}
         onClose={() => setEditingId(null)}
         size="lg"
         showDefaultActions={false}
@@ -143,7 +146,7 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
             <input type="hidden" name="id" value={editingWorkout.id} />
 
             <label>
-              운동 날짜
+              {"운동 날짜"}
               <input
                 type="date"
                 name="workout_date"
@@ -153,7 +156,7 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
             </label>
 
             <label>
-              회차
+              {"회차"}
               <select name="session_no" defaultValue={String(editingWorkout.session_no)}>
                 <option value="1">1</option>
                 <option value="2">2</option>
@@ -164,7 +167,7 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
             </label>
 
             <label>
-              운동 종류
+              {"운동 종류"}
               <select
                 name="exercise_type"
                 value={editingExerciseType}
@@ -176,13 +179,13 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
                   )
                 }
               >
-                <option value={WORKOUT_TYPE_GENERAL}>일반 운동</option>
-                <option value={WORKOUT_TYPE_RUNNING}>러닝</option>
+                <option value={WORKOUT_TYPE_GENERAL}>{"일반 운동"}</option>
+                <option value={WORKOUT_TYPE_RUNNING}>{"러닝"}</option>
               </select>
             </label>
 
             <label>
-              운동 시간(분)
+              {"운동 시간(분)"}
               <input
                 type="number"
                 name="duration_minutes"
@@ -193,30 +196,38 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
             </label>
 
             <label>
-              메모 (선택)
+              {"메모 (선택)"}
               <textarea name="notes" rows={3} defaultValue={editingWorkout.notes ?? ""} />
             </label>
 
             <div className="edit-proof-preview span-2">
               <div className="edit-proof-card">
                 <div className="edit-proof-head">
-                  <strong>{editingPolicy.requiredImageCount === 1 ? "인증 이미지(현재)" : "시작 이미지(현재)"}</strong>
-                  <button
+                  <strong>
+                    {editingPolicy.requiredImageCount === 1
+                      ? "인증 이미지(현재)"
+                      : "시작 이미지(현재)"}
+                  </strong>
+                  <Button
                     type="button"
-                    className="ghost-btn"
+                    variant="outline"
                     onClick={() => setShowStartUploader((prev) => !prev)}
                   >
-                    변경
-                  </button>
+                    {"변경"}
+                  </Button>
                 </div>
                 {editingWorkout.start_image_url ? (
                   <img src={editingWorkout.start_image_url} alt="시작 인증 이미지" loading="lazy" />
                 ) : (
-                  <span className="muted">이미지를 불러올 수 없습니다.</span>
+                  <span className="muted">{"이미지를 불러올 수 없습니다."}</span>
                 )}
                 {showStartUploader ? (
                   <FileInputField
-                    label={editingPolicy.requiredImageCount === 1 ? "인증 이미지 업로드" : "시작 이미지 업로드"}
+                    label={
+                      editingPolicy.requiredImageCount === 1
+                        ? "인증 이미지 업로드"
+                        : "시작 이미지 업로드"
+                    }
                     name="start_image"
                   />
                 ) : null}
@@ -225,47 +236,53 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
               {editingPolicy.requiredImageCount === 2 ? (
                 <div className="edit-proof-card">
                   <div className="edit-proof-head">
-                    <strong>종료 이미지(현재)</strong>
-                    <button
+                    <strong>{"종료 이미지(현재)"}</strong>
+                    <Button
                       type="button"
-                      className="ghost-btn"
+                      variant="outline"
                       onClick={() => setShowEndUploader((prev) => !prev)}
                     >
-                      변경
-                    </button>
+                      {"변경"}
+                    </Button>
                   </div>
                   {editingWorkout.end_image_url ? (
                     <img src={editingWorkout.end_image_url} alt="종료 인증 이미지" loading="lazy" />
                   ) : (
-                    <span className="muted">이미지를 불러올 수 없습니다.</span>
+                    <span className="muted">{"이미지를 불러올 수 없습니다."}</span>
                   )}
-                  {showEndUploader ? <FileInputField label="종료 이미지 업로드" name="end_image" /> : null}
+                  {showEndUploader ? (
+                    <FileInputField label="종료 이미지 업로드" name="end_image" />
+                  ) : null}
                 </div>
               ) : (
                 <div className="edit-proof-card">
                   <div className="edit-proof-head">
-                    <strong>러닝 안내</strong>
+                    <strong>{"러닝 안내"}</strong>
                   </div>
-                  <span className="muted">러닝은 사진 1장만 유지하며, 저장 시 기존 종료 이미지는 제거됩니다.</span>
+                  <span className="muted">
+                    {"러닝은 사진 1장만 사용하고, 저장 시 기존 종료 이미지는 제거됩니다."}
+                  </span>
                 </div>
               )}
             </div>
 
             <p className="muted span-2">
-              변경 버튼을 눌러 이미지를 선택하지 않으면 기존 이미지가 유지됩니다. 러닝은 30분 이상부터 인정됩니다.
+              {
+                "변경 버튼으로 새 이미지를 선택하지 않으면 기존 이미지가 유지됩니다. 러닝은 최소 30분부터 인정됩니다."
+              }
             </p>
 
-            <button className="primary-btn" type="submit" disabled={updatePending}>
+            <Button type="submit" disabled={updatePending}>
               {updatePending ? "수정 중..." : "수정"}
-            </button>
+            </Button>
           </form>
         ) : null}
       </Modal>
 
       <Modal
         open={Boolean(deleteTargetId) && !deleteState.ok}
-        title="인증 삭제"
-        description="정말 이 인증을 삭제할까요? 삭제 후 복구할 수 없습니다."
+        title={"인증 삭제"}
+        description={"정말 이 인증을 삭제할까요? 삭제 후 복구할 수 없습니다."}
         onClose={() => setDeleteTargetId(null)}
         confirmLabel={isDeleting ? "삭제 중..." : "삭제"}
         onConfirm={() => {

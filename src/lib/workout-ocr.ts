@@ -14,15 +14,46 @@ type OcrDurationResult = {
 type OcrVariant = {
   image: Blob | Buffer;
   label: string;
+  priority: number;
 };
+
+type RecognitionCandidate = {
+  parsed: ParsedTimestamp | null;
+  normalizedText: string;
+  confidence: number;
+  variant: OcrVariant;
+  score: number;
+};
+
+type TesseractWorker = Awaited<ReturnType<typeof createWorker>>;
+
+let browserWorkerPromise: Promise<TesseractWorker> | null = null;
 
 function normalizeOcrText(text: string) {
   return text
-    .replace(/[Oo]/g, "0")
-    .replace(/[IiLl|]/g, "1")
+    .replace(/[OoQD]/g, "0")
+    .replace(/[IiLl|!]/g, "1")
     .replace(/[Ss]/g, "5")
+    .replace(/[Zz]/g, "2")
+    .replace(/[Bb]/g, "8")
+    .replace(/[，,]/g, ".")
+    .replace(/[；;]/g, ":")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function isValidClock(hour: number, minute: number, second: number) {
+  return (
+    Number.isFinite(hour) &&
+    Number.isFinite(minute) &&
+    Number.isFinite(second) &&
+    hour >= 0 &&
+    hour <= 23 &&
+    minute >= 0 &&
+    minute <= 59 &&
+    second >= 0 &&
+    second <= 59
+  );
 }
 
 function toDate(
@@ -40,7 +71,12 @@ function toDate(
   if (upperAmPm === "PM" && resolvedHour < 12) resolvedHour += 12;
   if (upperAmPm === "AM" && resolvedHour === 12) resolvedHour = 0;
 
-  return new Date(year, month - 1, day, resolvedHour, minute, second, 0);
+  if (!isValidClock(resolvedHour, minute, second)) {
+    return null;
+  }
+
+  const date = new Date(year, month - 1, day, resolvedHour, minute, second, 0);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function parseTimeText(text: string, fallbackDate: string): ParsedTimestamp | null {
@@ -77,7 +113,7 @@ function parseTimeText(text: string, fallbackDate: string): ParsedTimestamp | nu
           match[4],
         );
 
-    if (!Number.isNaN(date.getTime())) {
+    if (date) {
       return { date, sourceText: match[0] };
     }
   }
@@ -128,12 +164,73 @@ function parseTimeText(text: string, fallbackDate: string): ParsedTimestamp | nu
       ampm,
     );
 
-    if (!Number.isNaN(date.getTime())) {
+    if (date) {
       return { date, sourceText: match[0].trim() };
     }
   }
 
   return null;
+}
+
+function scoreParsedTimestamp(
+  parsed: ParsedTimestamp | null,
+  normalizedText: string,
+  confidence: number,
+  variant: OcrVariant,
+) {
+  let score = confidence + variant.priority * 8;
+
+  if (!parsed) {
+    if (/\d{1,2}[:.]\d{2}/.test(normalizedText)) score += 10;
+    return score;
+  }
+
+  score += 35;
+
+  if (/20\d{2}/.test(parsed.sourceText)) score += 10;
+  if (/(AM|PM)/i.test(parsed.sourceText)) score += 4;
+  if (/[:.]\d{2}[:.]\d{2}/.test(parsed.sourceText)) score += 4;
+  if (parsed.date.getHours() >= 4 && parsed.date.getHours() <= 23) score += 4;
+
+  return score;
+}
+
+function preprocessCanvas(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  {
+    contrastBoost,
+    threshold,
+    invert,
+  }: {
+    contrastBoost: number;
+    threshold?: number;
+    invert?: boolean;
+  },
+) {
+  const imageData = context.getImageData(0, 0, width, height);
+  const { data } = imageData;
+
+  for (let index = 0; index < data.length; index += 4) {
+    const gray = data[index] * 0.299 + data[index + 1] * 0.587 + data[index + 2] * 0.114;
+    let value = (gray - 128) * contrastBoost + 128;
+    value = Math.max(0, Math.min(255, value));
+
+    if (typeof threshold === "number") {
+      value = value >= threshold ? 255 : 0;
+    }
+
+    if (invert) {
+      value = 255 - value;
+    }
+
+    data[index] = value;
+    data[index + 1] = value;
+    data[index + 2] = value;
+  }
+
+  context.putImageData(imageData, 0, 0);
 }
 
 async function createBrowserVariants(file: File): Promise<OcrVariant[]> {
@@ -142,38 +239,62 @@ async function createBrowserVariants(file: File): Promise<OcrVariant[]> {
   const height = bitmap.height;
 
   const variantsSpec = [
-    { label: "full", x: 0, y: 0, w: width, h: height, scale: 2.2 },
-    { label: "bottom-30", x: 0, y: Math.floor(height * 0.7), w: width, h: Math.ceil(height * 0.3), scale: 3 },
-    { label: "bottom-22", x: 0, y: Math.floor(height * 0.78), w: width, h: Math.ceil(height * 0.22), scale: 3.2 },
-    { label: "top-25", x: 0, y: 0, w: width, h: Math.ceil(height * 0.25), scale: 2.8 },
+    { label: "bottom-left-28-tight", x: 0.02, y: 0.7, w: 0.48, h: 0.24, scale: 3.8, priority: 8, threshold: 176 },
+    { label: "bottom-left-22", x: 0.03, y: 0.74, w: 0.44, h: 0.2, scale: 4, priority: 7, threshold: 172 },
+    { label: "bottom-left-18", x: 0.04, y: 0.78, w: 0.4, h: 0.16, scale: 4.2, priority: 7, threshold: 168 },
+    { label: "bottom-18-tight", x: 0.08, y: 0.82, w: 0.84, h: 0.14, scale: 3.8, priority: 6, threshold: 178 },
+    { label: "bottom-22", x: 0.04, y: 0.78, w: 0.92, h: 0.18, scale: 3.4, priority: 5, threshold: 170 },
+    { label: "bottom-30", x: 0, y: 0.7, w: 1, h: 0.3, scale: 3.1, priority: 4, threshold: 165 },
+    { label: "top-22", x: 0, y: 0, w: 1, h: 0.22, scale: 3, priority: 3, threshold: 168 },
+    { label: "center-30", x: 0.08, y: 0.35, w: 0.84, h: 0.3, scale: 2.8, priority: 2 },
+    { label: "full", x: 0, y: 0, w: 1, h: 1, scale: 2.2, priority: 1 },
   ];
 
   const outputs: OcrVariant[] = [];
+
   for (const variant of variantsSpec) {
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.floor(variant.w * variant.scale));
-    canvas.height = Math.max(1, Math.floor(variant.h * variant.scale));
-    const context = canvas.getContext("2d");
-    if (!context) continue;
+    const sourceX = Math.floor(width * variant.x);
+    const sourceY = Math.floor(height * variant.y);
+    const sourceW = Math.max(1, Math.floor(width * variant.w));
+    const sourceH = Math.max(1, Math.floor(height * variant.h));
 
-    context.filter = "grayscale(1) contrast(1.8) brightness(1.15)";
-    context.drawImage(
-      bitmap,
-      variant.x,
-      variant.y,
-      variant.w,
-      variant.h,
-      0,
-      0,
-      canvas.width,
-      canvas.height,
-    );
+    for (const mode of [
+      { suffix: "soft", threshold: undefined, invert: false, contrastBoost: 1.9 },
+      { suffix: "binary", threshold: variant.threshold, invert: false, contrastBoost: 2.4 },
+    ]) {
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.floor(sourceW * variant.scale));
+      canvas.height = Math.max(1, Math.floor(sourceH * variant.scale));
 
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/png"),
-    );
-    if (blob) {
-      outputs.push({ image: blob, label: variant.label });
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) continue;
+
+      context.filter = "grayscale(1) brightness(1.12)";
+      context.drawImage(
+        bitmap,
+        sourceX,
+        sourceY,
+        sourceW,
+        sourceH,
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      );
+
+      preprocessCanvas(context, canvas.width, canvas.height, mode);
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/png"),
+      );
+
+      if (blob) {
+        outputs.push({
+          image: blob,
+          label: `${variant.label}-${mode.suffix}`,
+          priority: variant.priority,
+        });
+      }
     }
   }
 
@@ -190,38 +311,78 @@ async function createImageVariants(file: File) {
     {
       image: Buffer.from(await file.arrayBuffer()),
       label: "server-raw",
+      priority: 1,
     },
   ];
 }
 
-async function recognizeTimestampText(file: File) {
-  const worker = await createWorker("eng");
+async function initializeWorker(worker: TesseractWorker) {
+  await worker.setParameters({
+    tessedit_pageseg_mode: PSM.SPARSE_TEXT,
+    tessedit_char_whitelist: "0123456789:-./ APMapm",
+    preserve_interword_spaces: "1",
+  });
+
+  return worker;
+}
+
+async function getWorker() {
+  if (typeof window === "undefined") {
+    const worker = await createWorker("eng");
+    return initializeWorker(worker);
+  }
+
+  if (!browserWorkerPromise) {
+    browserWorkerPromise = createWorker("eng").then((worker) => initializeWorker(worker));
+  }
+
+  return browserWorkerPromise;
+}
+
+async function recognizeTimestampText(file: File, fallbackDate: string) {
+  const worker = await getWorker();
+  const shouldTerminate = typeof window === "undefined";
 
   try {
-    await worker.setParameters({
-      tessedit_pageseg_mode: PSM.SPARSE_TEXT,
-      tessedit_char_whitelist: "0123456789:-./ APMapm",
-      preserve_interword_spaces: "1",
-    });
-
     const variants = await createImageVariants(file);
+    const candidates: RecognitionCandidate[] = [];
 
     for (const variant of variants) {
       const {
-        data: { text },
+        data: { text, confidence },
       } = await worker.recognize(variant.image);
-      const normalized = normalizeOcrText(text);
-      if (parseTimeText(normalized, "2026-01-01")) {
-        return normalized;
-      }
+
+      const normalizedText = normalizeOcrText(text);
+      const parsed = parseTimeText(normalizedText, fallbackDate);
+
+      candidates.push({
+        parsed,
+        normalizedText,
+        confidence,
+        variant,
+        score: scoreParsedTimestamp(parsed, normalizedText, confidence, variant),
+      });
     }
 
-    const {
-      data: { text },
-    } = await worker.recognize(Buffer.from(await file.arrayBuffer()));
-    return normalizeOcrText(text);
+    candidates.sort((left, right) => right.score - left.score);
+    const bestParsedCandidate = candidates.find((candidate) => candidate.parsed);
+
+    if (bestParsedCandidate) {
+      return {
+        text: bestParsedCandidate.normalizedText,
+        parsed: bestParsedCandidate.parsed,
+      };
+    }
+
+    const fallbackCandidate = candidates[0];
+    return {
+      text: fallbackCandidate?.normalizedText ?? "",
+      parsed: fallbackCandidate ? parseTimeText(fallbackCandidate.normalizedText, fallbackDate) : null,
+    };
   } finally {
-    await worker.terminate();
+    if (shouldTerminate) {
+      await worker.terminate();
+    }
   }
 }
 
@@ -230,25 +391,25 @@ export async function inferWorkoutDurationFromImages(
   endImage: File,
   workoutDate: string,
 ): Promise<OcrDurationResult | null> {
-  const [startText, endText] = await Promise.all([
-    recognizeTimestampText(startImage),
-    recognizeTimestampText(endImage),
+  const [startResult, endResult] = await Promise.all([
+    recognizeTimestampText(startImage, workoutDate),
+    recognizeTimestampText(endImage, workoutDate),
   ]);
 
-  const startTimestamp = parseTimeText(startText, workoutDate);
-  const endTimestamp = parseTimeText(endText, workoutDate);
+  const startTimestamp = startResult.parsed ?? parseTimeText(startResult.text, workoutDate);
+  const endTimestamp = endResult.parsed ?? parseTimeText(endResult.text, workoutDate);
 
   if (!startTimestamp || !endTimestamp) {
     return null;
   }
 
-  let endDate = new Date(endTimestamp.date);
+  const endDate = new Date(endTimestamp.date);
   if (endDate.getTime() < startTimestamp.date.getTime()) {
     endDate.setDate(endDate.getDate() + 1);
   }
 
   const durationMinutes = Math.round((endDate.getTime() - startTimestamp.date.getTime()) / 60000);
-  if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+  if (!Number.isFinite(durationMinutes) || durationMinutes <= 0 || durationMinutes > 12 * 60) {
     return null;
   }
 

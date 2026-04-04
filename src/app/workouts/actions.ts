@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 
 import { getCurrentWeekStart } from "@/lib/data";
-import { inferWorkoutDurationFromImages } from "@/lib/workout-ocr";
 import { createSupabaseAdmin } from "@/lib/supabase-server";
 import { getWorkoutPolicy, toWorkoutType } from "@/lib/workout-policy";
 
@@ -11,6 +10,7 @@ export type WorkoutActionState = {
   ok: boolean;
   message: string;
   submittedAt: number;
+  needsManualDuration?: boolean;
 };
 
 function fileExtension(file: File) {
@@ -89,41 +89,6 @@ function validateWorkoutInput(
   return null;
 }
 
-async function resolveDurationMinutes(
-  exerciseType: string,
-  workoutDate: string,
-  inputDurationMinutes: number,
-  startImage: File | null,
-  endImage: File | null,
-) {
-  const policy = getWorkoutPolicy(exerciseType);
-
-  if (
-    policy.requiredImageCount === 2 &&
-    startImage &&
-    startImage.size > 0 &&
-    endImage &&
-    endImage.size > 0
-  ) {
-    try {
-      const ocrResult = await inferWorkoutDurationFromImages(startImage, endImage, workoutDate);
-      if (ocrResult) {
-        return {
-          durationMinutes: ocrResult.durationMinutes,
-          ocrCalculated: true,
-        };
-      }
-    } catch {
-      // OCR failure falls back to the manually entered duration.
-    }
-  }
-
-  return {
-    durationMinutes: inputDurationMinutes,
-    ocrCalculated: false,
-  };
-}
-
 export async function createWorkoutSession(
   _prevState: WorkoutActionState,
   formData: FormData,
@@ -135,6 +100,8 @@ export async function createWorkoutSession(
     const exerciseType = toWorkoutType(String(formData.get("exercise_type") ?? ""));
     const inputDurationMinutes = Number(formData.get("duration_minutes") ?? 0);
     const notes = String(formData.get("notes") ?? "").trim();
+    const manualDurationOverride = String(formData.get("manual_duration_override") ?? "") === "1";
+    const timestampCalculated = String(formData.get("timestamp_calculated") ?? "") === "1";
     const startImage = formData.get("start_image") as File | null;
     const endImage = formData.get("end_image") as File | null;
 
@@ -142,13 +109,16 @@ export async function createWorkoutSession(
       return failure("회원과 운동 날짜는 필수입니다.");
     }
 
-    const { durationMinutes, ocrCalculated } = await resolveDurationMinutes(
-      exerciseType,
-      workoutDate,
-      inputDurationMinutes,
-      startImage,
-      endImage,
-    );
+    const durationMinutes = inputDurationMinutes;
+    const aiCalculated = exerciseType === "general" && !manualDurationOverride && timestampCalculated;
+
+    if (exerciseType === "general" && !manualDurationOverride && !timestampCalculated) {
+      return {
+        ok: false,
+        message: "사진을 올린 뒤 시간 계산 버튼을 눌러 운동 시간을 먼저 확인해 주세요.",
+        submittedAt: Date.now(),
+      };
+    }
 
     const inputError = validateWorkoutInput(exerciseType, durationMinutes, startImage, endImage);
     if (inputError) {
@@ -203,8 +173,8 @@ export async function createWorkoutSession(
 
     revalidateWorkoutPages();
     return success(
-      ocrCalculated
-        ? `인증 저장이 완료되었습니다. 운동 시간은 OCR로 ${durationMinutes}분 자동 계산되었습니다.`
+      aiCalculated
+        ? `인증 저장이 완료되었습니다. 운동 시간은 AI로 ${durationMinutes}분 자동 계산되었습니다.`
         : "인증 저장이 완료되었습니다.",
     );
   } catch (error) {
@@ -250,13 +220,7 @@ export async function updateWorkoutSession(
     const hasEndProofAfterUpdate =
       policy.requiredImageCount === 1 ? true : Boolean(session.end_image_path || nextEndCandidate);
 
-    const { durationMinutes, ocrCalculated } = await resolveDurationMinutes(
-      exerciseType,
-      workoutDate,
-      inputDurationMinutes,
-      nextStartCandidate,
-      nextEndCandidate,
-    );
+    const durationMinutes = inputDurationMinutes;
 
     if (durationMinutes < policy.minimumValidMinutes) {
       return failure(`${policy.label}은(는) 최소 ${policy.minimumValidMinutes}분 이상이어야 합니다.`);
@@ -318,11 +282,7 @@ export async function updateWorkoutSession(
     }
 
     revalidateWorkoutPages();
-    return success(
-      ocrCalculated
-        ? `인증 정보가 수정되었습니다. 운동 시간은 OCR로 ${durationMinutes}분 자동 계산되었습니다.`
-        : "인증 정보가 수정되었습니다.",
-    );
+    return success("인증 정보가 수정되었습니다.");
   } catch (error) {
     return failure(error instanceof Error ? error.message : "인증 수정 중 오류가 발생했습니다.");
   }
