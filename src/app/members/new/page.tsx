@@ -41,7 +41,7 @@ export default async function NewMemberPage() {
             ]}
           />
           <FormSelectField
-            label="목표 회차"
+            label="주간 목표 횟수"
             name="target_sessions"
             defaultValue="2"
             options={[
@@ -54,11 +54,31 @@ export default async function NewMemberPage() {
           />
           <label>
             기본 운동 시간(분)
-            <input type="number" min={0} name="target_minutes" defaultValue={120} required />
+            <input type="number" min={0} name="target_minutes" defaultValue={60} required />
           </label>
-          <Button type="submit">
-            회원 추가
-          </Button>
+          <label>
+            목표 항목
+            <input type="text" name="overall_goal_title" placeholder="예: 체지방량 감량" />
+          </label>
+          <label>
+            목표 수치
+            <input type="text" name="overall_goal_value" placeholder="예: -3kg" />
+          </label>
+          <label className="span-2">
+            목표 메모
+            <input type="text" name="overall_goal_note" placeholder="예: 8주 내 달성" />
+          </label>
+          <FormSelectField
+            label="최종 목표 도달 여부"
+            name="overall_goal_achieved"
+            placeholder="미설정"
+            options={[
+              { value: "true", label: "도달" },
+              { value: "false", label: "미도달" },
+            ]}
+            isClearable
+          />
+          <Button type="submit">회원 추가</Button>
         </form>
       </section>
     </div>

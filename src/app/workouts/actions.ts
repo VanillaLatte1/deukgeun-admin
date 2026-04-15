@@ -10,7 +10,6 @@ export type WorkoutActionState = {
   ok: boolean;
   message: string;
   submittedAt: number;
-  needsManualDuration?: boolean;
 };
 
 function fileExtension(file: File) {
@@ -79,7 +78,7 @@ function validateWorkoutInput(
   }
 
   if (!hasStartImage) {
-    return failure("인증 이미지를 첨부하세요.");
+    return failure("인증 이미지를 첨부해 주세요.");
   }
 
   if (policy.requiredImageCount === 2 && !hasEndImage) {
@@ -98,26 +97,13 @@ export async function createWorkoutSession(
     const workoutDate = String(formData.get("workout_date") ?? "").trim();
     const sessionNo = Number(formData.get("session_no") ?? 1);
     const exerciseType = toWorkoutType(String(formData.get("exercise_type") ?? ""));
-    const inputDurationMinutes = Number(formData.get("duration_minutes") ?? 0);
+    const durationMinutes = Number(formData.get("duration_minutes") ?? 0);
     const notes = String(formData.get("notes") ?? "").trim();
-    const manualDurationOverride = String(formData.get("manual_duration_override") ?? "") === "1";
-    const timestampCalculated = String(formData.get("timestamp_calculated") ?? "") === "1";
     const startImage = formData.get("start_image") as File | null;
     const endImage = formData.get("end_image") as File | null;
 
     if (!memberId || !workoutDate) {
       return failure("회원과 운동 날짜는 필수입니다.");
-    }
-
-    const durationMinutes = inputDurationMinutes;
-    const aiCalculated = exerciseType === "general" && !manualDurationOverride && timestampCalculated;
-
-    if (exerciseType === "general" && !manualDurationOverride && !timestampCalculated) {
-      return {
-        ok: false,
-        message: "사진을 올린 뒤 시간 계산 버튼을 눌러 운동 시간을 먼저 확인해 주세요.",
-        submittedAt: Date.now(),
-      };
     }
 
     const inputError = validateWorkoutInput(exerciseType, durationMinutes, startImage, endImage);
@@ -144,7 +130,7 @@ export async function createWorkoutSession(
     }
 
     if ((existingSessions ?? []).length > 0) {
-      return failure("선택한 회원의 해당 주간/회차 인증은 이미 등록되어 있습니다.");
+      return failure("선택한 회원은 해당 주간/회차 인증이 이미 등록되어 있습니다.");
     }
 
     const bucket = "workout-proofs";
@@ -172,11 +158,7 @@ export async function createWorkoutSession(
     }
 
     revalidateWorkoutPages();
-    return success(
-      aiCalculated
-        ? `인증 저장이 완료되었습니다. 운동 시간은 AI로 ${durationMinutes}분 자동 계산되었습니다.`
-        : "인증 저장이 완료되었습니다.",
-    );
+    return success("인증 저장이 완료되었습니다.");
   } catch (error) {
     return failure(error instanceof Error ? error.message : "인증 저장 중 오류가 발생했습니다.");
   }
@@ -227,7 +209,7 @@ export async function updateWorkoutSession(
     }
 
     if (!hasStartProofAfterUpdate) {
-      return failure("인증 이미지를 첨부하세요.");
+      return failure("인증 이미지를 첨부해 주세요.");
     }
 
     if (!hasEndProofAfterUpdate) {

@@ -17,6 +17,22 @@ const initialMemberActionState: MemberActionState = {
   submittedAt: 0,
 };
 
+function isMissingOverallGoalColumn(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "42703"
+  );
+}
+
+function parseOverallGoalAchieved(value: FormDataEntryValue | null) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "true") return true;
+  if (normalized === "false") return false;
+  return null;
+}
+
 function memberSuccess(message: string): MemberActionState {
   return { ok: true, message, submittedAt: Date.now() };
 }
@@ -28,6 +44,10 @@ function memberFailure(message: string): MemberActionState {
 export async function createMember(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const gender = String(formData.get("gender") ?? "").trim();
+  const overallGoalTitle = String(formData.get("overall_goal_title") ?? "").trim();
+  const overallGoalValue = String(formData.get("overall_goal_value") ?? "").trim();
+  const overallGoalNote = String(formData.get("overall_goal_note") ?? "").trim();
+  const overallGoalAchieved = parseOverallGoalAchieved(formData.get("overall_goal_achieved"));
 
   if (!name) {
     throw new Error("회원 이름은 필수입니다.");
@@ -38,13 +58,30 @@ export async function createMember(formData: FormData) {
   }
 
   const supabase = createSupabaseAdmin();
-  const { error } = await supabase.from("members").insert({
+  const payload = {
     name,
     gender,
-  });
+    overall_goal_title: overallGoalTitle || null,
+    overall_goal_value: overallGoalValue || null,
+    overall_goal_note: overallGoalNote || null,
+    overall_goal_achieved: overallGoalAchieved,
+  };
+
+  const { error } = await supabase.from("members").insert(payload);
 
   if (error) {
-    throw error;
+    if (!isMissingOverallGoalColumn(error)) {
+      throw error;
+    }
+
+    const { error: fallbackError } = await supabase.from("members").insert({
+      name,
+      gender,
+    });
+
+    if (fallbackError) {
+      throw fallbackError;
+    }
   }
 
   revalidatePath("/members");
@@ -56,6 +93,10 @@ export async function createMemberWithGoal(formData: FormData) {
   const gender = String(formData.get("gender") ?? "").trim();
   const targetSessions = Number(formData.get("target_sessions") ?? 0);
   const targetMinutes = Number(formData.get("target_minutes") ?? 0);
+  const overallGoalTitle = String(formData.get("overall_goal_title") ?? "").trim();
+  const overallGoalValue = String(formData.get("overall_goal_value") ?? "").trim();
+  const overallGoalNote = String(formData.get("overall_goal_note") ?? "").trim();
+  const overallGoalAchieved = parseOverallGoalAchieved(formData.get("overall_goal_achieved"));
 
   if (!name) {
     throw new Error("회원 이름은 필수입니다.");
@@ -74,17 +115,43 @@ export async function createMemberWithGoal(formData: FormData) {
   }
 
   const supabase = createSupabaseAdmin();
-  const { data: member, error: memberError } = await supabase
+  let member: { id: string } | null = null;
+  const memberInsertPayload = {
+    name,
+    gender,
+    overall_goal_title: overallGoalTitle || null,
+    overall_goal_value: overallGoalValue || null,
+    overall_goal_note: overallGoalNote || null,
+    overall_goal_achieved: overallGoalAchieved,
+  };
+
+  const { data: insertedMember, error: memberError } = await supabase
     .from("members")
-    .insert({
-      name,
-      gender,
-    })
+    .insert(memberInsertPayload)
     .select("id")
     .single();
 
   if (memberError) {
-    throw memberError;
+    if (!isMissingOverallGoalColumn(memberError)) {
+      throw memberError;
+    }
+
+    const { data: fallbackMember, error: fallbackMemberError } = await supabase
+      .from("members")
+      .insert({
+        name,
+        gender,
+      })
+      .select("id")
+      .single();
+
+    if (fallbackMemberError) {
+      throw fallbackMemberError;
+    }
+
+    member = fallbackMember;
+  } else {
+    member = insertedMember;
   }
 
   const { error: goalError } = await supabase.from("weekly_goals").insert({
@@ -139,6 +206,10 @@ export async function updateMemberWithGoal(formData: FormData) {
   const gender = String(formData.get("gender") ?? "").trim();
   const targetSessions = Number(formData.get("target_sessions") ?? 0);
   const targetMinutes = Number(formData.get("target_minutes") ?? 0);
+  const overallGoalTitle = String(formData.get("overall_goal_title") ?? "").trim();
+  const overallGoalValue = String(formData.get("overall_goal_value") ?? "").trim();
+  const overallGoalNote = String(formData.get("overall_goal_note") ?? "").trim();
+  const overallGoalAchieved = parseOverallGoalAchieved(formData.get("overall_goal_achieved"));
 
   if (!memberId) {
     throw new Error("수정할 회원 정보가 없습니다.");
@@ -167,11 +238,29 @@ export async function updateMemberWithGoal(formData: FormData) {
     .update({
       name,
       gender,
+      overall_goal_title: overallGoalTitle || null,
+      overall_goal_value: overallGoalValue || null,
+      overall_goal_note: overallGoalNote || null,
+      overall_goal_achieved: overallGoalAchieved,
     })
     .eq("id", memberId);
 
   if (memberError) {
-    throw memberError;
+    if (!isMissingOverallGoalColumn(memberError)) {
+      throw memberError;
+    }
+
+    const { error: fallbackMemberError } = await supabase
+      .from("members")
+      .update({
+        name,
+        gender,
+      })
+      .eq("id", memberId);
+
+    if (fallbackMemberError) {
+      throw fallbackMemberError;
+    }
   }
 
   const { error: goalError } = await supabase.from("weekly_goals").upsert(

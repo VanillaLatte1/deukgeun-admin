@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardCheck, ClipboardList, LayoutDashboard, UsersRound } from "lucide-react";
+import {
+  CalendarX2,
+  ClipboardCheck,
+  ClipboardList,
+  LayoutDashboard,
+  UsersRound,
+} from "lucide-react";
 
 import { SheetClose } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -27,6 +33,11 @@ const menus = [
     href: "/workout-records",
     title: "인증 기록 관리",
     icon: ClipboardList,
+  },
+  {
+    href: "/weekly-exceptions",
+    title: "주간 제외 관리",
+    icon: CalendarX2,
   },
 ];
 

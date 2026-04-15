@@ -19,6 +19,11 @@ type MemberRow = {
   name: string;
   gender: string | null;
   genderLabel: string;
+  overallGoalTitle: string | null;
+  overallGoalValue: string | null;
+  overallGoalNote: string | null;
+  overallGoalAchieved: boolean | null;
+  overallGoalLabel: string;
   targetSessions: number;
   targetSessionsLabel: string;
   targetMinutes: number;
@@ -35,6 +40,67 @@ const initialActionState: MemberActionState = {
   message: "",
   submittedAt: 0,
 };
+
+function GoalFields({
+  member,
+}: {
+  member?: {
+    overallGoalTitle: string | null;
+    overallGoalValue: string | null;
+    overallGoalNote: string | null;
+    overallGoalAchieved: boolean | null;
+  } | null;
+}) {
+  const achievedValue =
+    member?.overallGoalAchieved === null || member?.overallGoalAchieved === undefined
+      ? ""
+      : member.overallGoalAchieved
+        ? "true"
+        : "false";
+
+  return (
+    <>
+      <label>
+        목표 항목
+        <input
+          type="text"
+          name="overall_goal_title"
+          placeholder="예: 골격근량 증가"
+          defaultValue={member?.overallGoalTitle ?? ""}
+        />
+      </label>
+      <label>
+        목표 수치
+        <input
+          type="text"
+          name="overall_goal_value"
+          placeholder="예: +2kg"
+          defaultValue={member?.overallGoalValue ?? ""}
+        />
+      </label>
+      <label className="span-2">
+        목표 메모
+        <input
+          type="text"
+          name="overall_goal_note"
+          placeholder="예: 6월 말까지 달성"
+          defaultValue={member?.overallGoalNote ?? ""}
+        />
+      </label>
+      <FormSelectField
+        label="최종 목표 도달 여부"
+        name="overall_goal_achieved"
+        defaultValue={achievedValue}
+        placeholder="미설정"
+        options={[
+          { value: "true", label: "도달" },
+          { value: "false", label: "미도달" },
+        ]}
+        isClearable
+      />
+    </>
+  );
+}
 
 export function MembersManager({ members }: MembersManagerProps) {
   const router = useRouter();
@@ -101,7 +167,7 @@ export function MembersManager({ members }: MembersManagerProps) {
       <Modal
         open={createOpen}
         title="회원 등록"
-        description="회원 정보와 기본 운동 기준을 한 번에 등록합니다."
+        description="회원 정보와 주간 목표, 장기 목표를 함께 등록합니다."
         onClose={() => setCreateOpen(false)}
         size="lg"
         showDefaultActions={false}
@@ -125,7 +191,7 @@ export function MembersManager({ members }: MembersManagerProps) {
             ]}
           />
           <FormSelectField
-            label="목표 회차"
+            label="주간 목표 횟수"
             name="target_sessions"
             defaultValue="2"
             options={[
@@ -140,6 +206,7 @@ export function MembersManager({ members }: MembersManagerProps) {
             기본 운동 시간(분)
             <input type="number" min={0} name="target_minutes" defaultValue={60} required />
           </label>
+          <GoalFields />
           {createState.message && !createState.ok ? (
             <p className="error span-4">{createState.message}</p>
           ) : null}
@@ -152,7 +219,7 @@ export function MembersManager({ members }: MembersManagerProps) {
       <Modal
         open={Boolean(editingMember)}
         title="회원 정보 수정"
-        description="이름, 성별, 목표 회차와 기본 운동 시간을 수정할 수 있습니다."
+        description="회원 기본 정보, 주간 목표, 장기 목표를 수정할 수 있습니다."
         onClose={() => setEditingId(null)}
         size="lg"
         showDefaultActions={false}
@@ -179,7 +246,7 @@ export function MembersManager({ members }: MembersManagerProps) {
               ]}
             />
             <FormSelectField
-              label="목표 회차"
+              label="주간 목표 횟수"
               name="target_sessions"
               defaultValue={String(editingMember.targetSessions)}
               options={[
@@ -200,6 +267,7 @@ export function MembersManager({ members }: MembersManagerProps) {
                 required
               />
             </label>
+            <GoalFields member={editingMember} />
             {updateState.message && !updateState.ok ? (
               <p className="error span-4">{updateState.message}</p>
             ) : null}

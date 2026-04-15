@@ -58,7 +58,7 @@ export default async function EditMemberPage({ params }: EditMemberPageProps) {
             ]}
           />
           <FormSelectField
-            label="목표 회차"
+            label="주간 목표 횟수"
             name="target_sessions"
             defaultValue={String(goal?.target_sessions ?? 2)}
             options={[
@@ -75,13 +75,55 @@ export default async function EditMemberPage({ params }: EditMemberPageProps) {
               type="number"
               min={0}
               name="target_minutes"
-              defaultValue={goal?.target_minutes ?? 120}
+              defaultValue={goal?.target_minutes ?? 60}
               required
             />
           </label>
-          <Button type="submit">
-            수정 저장
-          </Button>
+          <label>
+            목표 항목
+            <input
+              type="text"
+              name="overall_goal_title"
+              defaultValue={member.overall_goal_title ?? ""}
+              placeholder="예: 골격근량 증가"
+            />
+          </label>
+          <label>
+            목표 수치
+            <input
+              type="text"
+              name="overall_goal_value"
+              defaultValue={member.overall_goal_value ?? ""}
+              placeholder="예: +2kg"
+            />
+          </label>
+          <label className="span-2">
+            목표 메모
+            <input
+              type="text"
+              name="overall_goal_note"
+              defaultValue={member.overall_goal_note ?? ""}
+              placeholder="예: 6월 말까지 달성"
+            />
+          </label>
+          <FormSelectField
+            label="최종 목표 도달 여부"
+            name="overall_goal_achieved"
+            defaultValue={
+              member.overall_goal_achieved === null
+                ? ""
+                : member.overall_goal_achieved
+                  ? "true"
+                  : "false"
+            }
+            placeholder="미설정"
+            options={[
+              { value: "true", label: "도달" },
+              { value: "false", label: "미도달" },
+            ]}
+            isClearable
+          />
+          <Button type="submit">수정 저장</Button>
         </form>
       </section>
     </div>

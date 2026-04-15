@@ -2,7 +2,7 @@ import { ClipboardCheck } from "lucide-react";
 
 import { SupabaseRequiredPanel } from "@/components/supabase-required-panel";
 import { WorkoutEntryForm } from "@/components/workout-entry-form";
-import { listMembers, listWorkoutSessionSlots } from "@/lib/data";
+import { getCurrentWeekStart, listMembers, listWeeklyExceptions, listWorkoutSessionSlots } from "@/lib/data";
 import { isSupabaseReady } from "@/lib/supabase-server";
 
 export default async function WorkoutsPage() {
@@ -11,9 +11,11 @@ export default async function WorkoutsPage() {
   }
 
   const defaultWorkoutDate = new Date().toISOString().slice(0, 10);
-  const [members, existingSessionSlots] = await Promise.all([
+  const currentWeekStart = getCurrentWeekStart();
+  const [members, existingSessionSlots, weeklyExceptions] = await Promise.all([
     listMembers(),
     listWorkoutSessionSlots(),
+    listWeeklyExceptions(currentWeekStart),
   ]);
 
   return (
@@ -29,6 +31,7 @@ export default async function WorkoutsPage() {
           members={members}
           defaultWorkoutDate={defaultWorkoutDate}
           existingSessionSlots={existingSessionSlots}
+          excusedMemberIds={weeklyExceptions.map((item) => item.member_id)}
         />
       </section>
     </div>

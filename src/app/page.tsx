@@ -107,11 +107,17 @@ export default async function Home({ searchParams }: HomeProps) {
   const inProgressCount = data.memberStats.filter(
     (item) => getProgressStatus(item.doneSessions, item.targetSessions) === "in_progress",
   ).length;
+  const excusedCount = data.memberStats.filter(
+    (item) => getProgressStatus(item.doneSessions, item.targetSessions) === "excused",
+  ).length;
   const completeMembers = data.memberStats
     .filter((item) => getProgressStatus(item.doneSessions, item.targetSessions) === "complete")
     .map((item) => item.member.name);
   const inProgressMembers = data.memberStats
     .filter((item) => getProgressStatus(item.doneSessions, item.targetSessions) === "in_progress")
+    .map((item) => item.member.name);
+  const excusedMembers = data.memberStats
+    .filter((item) => getProgressStatus(item.doneSessions, item.targetSessions) === "excused")
     .map((item) => item.member.name);
   const recentCompact = data.recent.slice(0, 6);
   const completionRate = data.totals.goals > 0
@@ -125,7 +131,7 @@ export default async function Home({ searchParams }: HomeProps) {
           <span className="dashboard-kicker">Dashboard Overview</span>
           <h2>메인 대시보드</h2>
           <p className="dashboard-hero-copy">
-            이번 주 운동 진행 현황과 최근 인증 흐름을 한 화면에서 빠르게 확인할 수 있어요.
+            이번 주 운동 진행 현황과 주간 제외 인원을 한 화면에서 빠르게 확인할 수 있어요.
           </p>
           <div className="dashboard-week-row">
             <div className="dashboard-week-card">
@@ -180,6 +186,10 @@ export default async function Home({ searchParams }: HomeProps) {
               <span>진행 중</span>
               <strong>{inProgressCount}명</strong>
             </div>
+            <div>
+              <span>제외</span>
+              <strong>{excusedCount}명</strong>
+            </div>
           </div>
         </article>
       </section>
@@ -193,9 +203,21 @@ export default async function Home({ searchParams }: HomeProps) {
         </article>
         <article className="dashboard-stat-card">
           <p className="dashboard-stat-label">
+            <Users size={16} /> 이번 주 진행 대상
+          </p>
+          <strong>{data.totals.activeMembers}</strong>
+        </article>
+        <article className="dashboard-stat-card">
+          <p className="dashboard-stat-label">
             <Target size={16} /> 목표 설정 회원
           </p>
           <strong>{data.totals.goals}</strong>
+        </article>
+        <article className="dashboard-stat-card">
+          <p className="dashboard-stat-label">
+            <CircleDashed size={16} /> 이번 주 제외
+          </p>
+          <strong>{data.totals.excusedMembers}</strong>
         </article>
         <article className="dashboard-stat-card accent">
           <p className="dashboard-stat-label">
@@ -258,9 +280,9 @@ export default async function Home({ searchParams }: HomeProps) {
                 return (
                   <tr key={item.member.id}>
                     <td>{item.member.name}</td>
-                    <td>{item.targetSessions}</td>
+                    <td>{item.isExcused ? "-" : item.targetSessions}</td>
                     <td>{item.doneSessions}</td>
-                    <td>{item.targetMinutes}</td>
+                    <td>{item.isExcused ? "-" : item.targetMinutes}</td>
                     <td>{item.doneMinutes}</td>
                     <td>
                       <span className={`badge status-${status}`}>{statusLabel(status)}</span>
@@ -288,9 +310,13 @@ export default async function Home({ searchParams }: HomeProps) {
                   </p>
                   <strong>{completeCount}명</strong>
                 </div>
-                <p className="dashboard-status-copy">
-                  {completeMembers.length > 0 ? completeMembers.join(", ") : "해당 회원이 없습니다."}
-                </p>
+                {completeMembers.length > 0 ? (
+                  <p className="dashboard-status-copy">{completeMembers.join(", ")}</p>
+                ) : (
+                  <div className="dashboard-empty-state">
+                    <p className="dashboard-empty-copy">해당 회원이 없습니다.</p>
+                  </div>
+                )}
               </div>
               <div className="dashboard-status-card">
                 <div className="dashboard-status-head">
@@ -299,11 +325,33 @@ export default async function Home({ searchParams }: HomeProps) {
                   </p>
                   <strong>{inProgressCount}명</strong>
                 </div>
-                <p className="dashboard-status-copy">
-                  {inProgressMembers.length > 0
-                    ? inProgressMembers.join(", ")
-                    : "해당 회원이 없습니다."}
-                </p>
+                {inProgressMembers.length > 0 ? (
+                  <p className="dashboard-status-copy">{inProgressMembers.join(", ")}</p>
+                ) : (
+                  <div className="dashboard-empty-state">
+                    <p className="dashboard-empty-copy">해당 회원이 없습니다.</p>
+                  </div>
+                )}
+              </div>
+              <div className="dashboard-status-card">
+                <div className="dashboard-status-head">
+                  <p className="muted stat-head">
+                    <CircleDashed size={15} /> 제외
+                  </p>
+                  <strong>{excusedCount}명</strong>
+                </div>
+                {excusedMembers.length > 0 ? (
+                  <p className="dashboard-status-copy">{excusedMembers.join(", ")}</p>
+                ) : (
+                  <div className="dashboard-empty-state">
+                    <p className="dashboard-empty-copy">해당 회원이 없습니다.</p>
+                  </div>
+                )}
+                <div className="dashboard-status-action">
+                  <Link href={`/weekly-exceptions?week=${selectedWeek}`} className="sort-chip active">
+                    주간 제외 관리
+                  </Link>
+                </div>
               </div>
             </div>
           </article>
@@ -336,7 +384,9 @@ export default async function Home({ searchParams }: HomeProps) {
                 );
               })}
               {recentCompact.length === 0 ? (
-                <p className="muted">표시할 인증 내역이 없습니다.</p>
+                <div className="dashboard-empty-state recent-empty-state">
+                  <p className="dashboard-empty-copy">표시할 인증 내역이 없습니다.</p>
+                </div>
               ) : null}
             </div>
           </article>

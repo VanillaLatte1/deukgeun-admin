@@ -4,6 +4,10 @@ create table if not exists public.members (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   gender text,
+  overall_goal_title text,
+  overall_goal_value text,
+  overall_goal_note text,
+  overall_goal_achieved boolean,
   created_at timestamptz not null default now()
 );
 
@@ -72,6 +76,10 @@ with check (bucket_id = 'workout-proofs' and false);
 
 
 alter table public.members add column if not exists gender text;
+alter table public.members add column if not exists overall_goal_title text;
+alter table public.members add column if not exists overall_goal_value text;
+alter table public.members add column if not exists overall_goal_note text;
+alter table public.members add column if not exists overall_goal_achieved boolean;
 alter table public.workout_sessions add column if not exists exercise_type text not null default 'general';
 alter table public.workout_sessions alter column end_image_path drop not null;
 

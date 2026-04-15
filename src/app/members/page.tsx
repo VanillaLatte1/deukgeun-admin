@@ -9,6 +9,30 @@ function genderLabel(gender: string | null) {
   return "-";
 }
 
+function overallGoalLabel(member: {
+  overall_goal_title: string | null;
+  overall_goal_value: string | null;
+  overall_goal_note: string | null;
+  overall_goal_achieved: boolean | null;
+}) {
+  const parts = [member.overall_goal_title, member.overall_goal_value].filter(Boolean);
+  const base = parts.join(" / ");
+  const status =
+    member.overall_goal_achieved === null
+      ? null
+      : member.overall_goal_achieved
+        ? "도달"
+        : "미도달";
+
+  const noteParts = [member.overall_goal_note, status].filter(Boolean);
+
+  if (base && noteParts.length > 0) {
+    return `${base} (${noteParts.join(" / ")})`;
+  }
+
+  return base || noteParts.join(" / ") || "-";
+}
+
 export default async function MembersPage() {
   if (!isSupabaseReady()) {
     return <SupabaseRequiredPanel showEnvGuide={false} />;
@@ -24,6 +48,11 @@ export default async function MembersPage() {
       id: member.id,
       name: member.name,
       gender: member.gender,
+      overallGoalTitle: member.overall_goal_title,
+      overallGoalValue: member.overall_goal_value,
+      overallGoalNote: member.overall_goal_note,
+      overallGoalAchieved: member.overall_goal_achieved,
+      overallGoalLabel: overallGoalLabel(member),
       genderLabel: genderLabel(member.gender),
       targetSessions: goal?.target_sessions ?? 2,
       targetSessionsLabel: `${goal?.target_sessions ?? 0}회`,
