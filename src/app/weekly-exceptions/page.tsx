@@ -3,8 +3,15 @@ import { CalendarX2 } from "lucide-react";
 
 import { WeeklyExceptionManager } from "@/components/weekly-exception-manager";
 import { SupabaseRequiredPanel } from "@/components/supabase-required-panel";
-import { COMMUNITY_START_WEEK, getCurrentWeekStart, listMembers, listWeeklyExceptions } from "@/lib/data";
+import {
+  COMMUNITY_START_WEEK,
+  getCurrentWeekStart,
+  listMembers,
+  listWeeklyExceptions,
+} from "@/lib/data";
 import { isSupabaseReady } from "@/lib/supabase-server";
+
+export const dynamic = "force-dynamic";
 
 type WeeklyExceptionsPageProps = {
   searchParams?: Promise<{
@@ -60,26 +67,41 @@ export default async function WeeklyExceptionsPage({ searchParams }: WeeklyExcep
 
   return (
     <div className="page-stack">
-      <section className="panel panel-highlight workouts-page-hero">
-        <h2 className="title-with-icon">
-          <CalendarX2 size={18} /> 주간 제외 관리
-        </h2>
-        <p className="weekly-exceptions-subcopy">
-          특정 회원을 특정 주차의 진행 체크 분모에서 제외할 수 있습니다.
-        </p>
+      <section className="panel panel-highlight">
+        <div className="section-head members-form-head">
+          <div>
+            <h2 className="title-with-icon">
+              <CalendarX2 size={18} /> 주간 제외 관리
+            </h2>
+            <p className="member-page-subcopy">
+              특정 주차에서 진행 체크를 제외할 회원을 선택하고, 이미 등록된 대상도 바로 해제할 수
+              있습니다.
+            </p>
+          </div>
+        </div>
       </section>
 
-      <section className="panel">
-        <div className="week-chip-list dashboard-week-chip-list">
-          {[...weekStarts].reverse().map((weekStart) => (
-            <Link
-              key={weekStart}
-              href={`/weekly-exceptions?week=${weekStart}`}
-              className={`week-chip ${weekStart === selectedWeek ? "active" : ""}`}
-            >
-              {weekStart}
-            </Link>
-          ))}
+      <section className="panel admin-detail-panel">
+        <div className="admin-form-section">
+          <div className="admin-form-section-head">
+            <div className="admin-form-section-title-row">
+              <h3>주차 선택</h3>
+              <span className="admin-form-step">0</span>
+            </div>
+            <p>제외 처리를 적용할 기준 주차를 먼저 선택해 주세요.</p>
+          </div>
+
+          <div className="week-chip-list dashboard-week-chip-list">
+            {[...weekStarts].reverse().map((weekStart) => (
+              <Link
+                key={weekStart}
+                href={`/weekly-exceptions?week=${weekStart}`}
+                className={`week-chip ${weekStart === selectedWeek ? "active" : ""}`}
+              >
+                {weekStart}
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 

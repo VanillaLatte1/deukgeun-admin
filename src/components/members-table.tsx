@@ -8,6 +8,7 @@ type MemberRow = {
   name: string;
   genderLabel: string;
   overallGoalLabel: string;
+  settlementLabel: string;
   targetSessionsLabel: string;
   targetMinutesLabel: string;
   createdAtLabel: string;
@@ -15,10 +16,9 @@ type MemberRow = {
 
 type MembersTableProps = {
   members: MemberRow[];
-  onSelectMember?: (memberId: string) => void;
 };
 
-export function MembersTable({ members, onSelectMember }: MembersTableProps) {
+export function MembersTable({ members }: MembersTableProps) {
   const router = useRouter();
 
   return (
@@ -29,6 +29,7 @@ export function MembersTable({ members, onSelectMember }: MembersTableProps) {
             <th>이름</th>
             <th>성별</th>
             <th>전체 목표</th>
+            <th>상반기 정산</th>
             <th>주간 목표 횟수</th>
             <th>기본 운동 시간(분)</th>
             <th>등록일</th>
@@ -40,13 +41,12 @@ export function MembersTable({ members, onSelectMember }: MembersTableProps) {
             <tr
               key={member.id}
               className="clickable-row"
-              onClick={() =>
-                onSelectMember ? onSelectMember(member.id) : router.push(`/members/${member.id}/edit`)
-              }
+              onClick={() => router.push(`/members/${member.id}/edit`)}
             >
               <td>{member.name}</td>
               <td>{member.genderLabel}</td>
               <td>{member.overallGoalLabel}</td>
+              <td>{member.settlementLabel}</td>
               <td>{member.targetSessionsLabel}</td>
               <td>{member.targetMinutesLabel}</td>
               <td>{member.createdAtLabel}</td>
@@ -58,11 +58,7 @@ export function MembersTable({ members, onSelectMember }: MembersTableProps) {
                   <button
                     type="button"
                     className="sort-chip"
-                    onClick={() =>
-                      onSelectMember
-                        ? onSelectMember(member.id)
-                        : router.push(`/members/${member.id}/edit`)
-                    }
+                    onClick={() => router.push(`/members/${member.id}/edit`)}
                   >
                     수정
                   </button>

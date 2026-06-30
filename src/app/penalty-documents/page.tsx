@@ -17,6 +17,10 @@ function formatCurrency(amount: number) {
   return `${amount.toLocaleString("ko-KR")}원`;
 }
 
+function formatRate(rate: number) {
+  return `${Math.round(rate * 100)}%`;
+}
+
 function toSingleValue(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -246,7 +250,20 @@ export default async function PenaltyDocumentsPage({
                       ? "목표 미설정"
                       : selectedSummary.finalGoalAchieved
                         ? "달성"
-                        : `미달성 (최종 벌금 ${formatCurrency(selectedSummary.finalFineAmount)})`}
+                        : "미달성"}
+                    <span className="penalty-table-note">
+                      본인 설정 벌금 {formatCurrency(selectedSummary.penaltyAmount)} x{" "}
+                      {formatRate(selectedSummary.finalFineRate)} ={" "}
+                      {formatCurrency(selectedSummary.finalFineAmount)}
+                    </span>
+                    <span className="penalty-table-note">
+                      정산 기준: {selectedSummary.finalFineReason}
+                    </span>
+                    {selectedSummary.hasJuneGoalProof ? (
+                      <span className="penalty-table-note">
+                        6월 목표 도달 증적일: {selectedSummary.juneGoalProofDate ?? "날짜 미기재"}
+                      </span>
+                    ) : null}
                   </td>
                 </tr>
                 <tr>

@@ -50,18 +50,14 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
     }
   }, [updateState.ok, deleteState.ok, router]);
 
-  useEffect(() => {
-    setShowStartUploader(false);
-    setShowEndUploader(false);
-  }, [editingId]);
-
   const editingWorkout = workouts.find((item) => item.id === editingId) ?? null;
 
-  useEffect(() => {
-    if (editingWorkout) {
-      setEditingExerciseType(editingWorkout.exercise_type);
-    }
-  }, [editingWorkout]);
+  function openEditor(workout: WorkoutSession) {
+    setEditingId(workout.id);
+    setShowStartUploader(false);
+    setShowEndUploader(false);
+    setEditingExerciseType(workout.exercise_type);
+  }
 
   const editingPolicy = useMemo(
     () => getWorkoutPolicy(editingExerciseType),
@@ -110,7 +106,7 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setEditingId(workout.id)}
+                        onClick={() => openEditor(workout)}
                       >
                         {"수정"}
                       </Button>

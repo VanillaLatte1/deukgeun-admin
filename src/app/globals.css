@@ -83,6 +83,7 @@ a {
   display: grid;
   grid-template-columns: 108px 1fr;
   gap: 18px;
+  min-width: 0;
   padding: 18px;
 }
 
@@ -236,6 +237,7 @@ a {
   display: grid;
   align-content: start;
   gap: 14px;
+  min-width: 0;
   padding: 6px 8px 6px 0;
 }
 
@@ -298,14 +300,21 @@ a {
 .content {
   display: grid;
   gap: 14px;
+  min-width: 0;
+}
+
+.route-fade-in {
+  min-width: 0;
 }
 
 .page-stack {
   display: grid;
   gap: 14px;
+  min-width: 0;
 }
 
 .page-stack > section {
+  min-width: 0;
   border: 2px solid var(--line);
   border-radius: 18px;
   background: #fff;
@@ -1008,6 +1017,7 @@ a {
   border-radius: 18px;
   box-shadow: none;
   padding: 16px;
+  min-width: 0;
 }
 
 .panel-highlight {
@@ -1627,6 +1637,7 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
   margin-bottom: 10px;
 }
 
@@ -1645,6 +1656,13 @@ a {
   margin-bottom: 0;
   padding-bottom: 0 !important;
   border-bottom: 0 !important;
+}
+
+.member-page-subcopy {
+  margin: 8px 0 0;
+  color: #5f7a68;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .workouts-page-hero h2 {
@@ -1697,10 +1715,368 @@ a {
   box-shadow: 0 12px 24px rgba(25, 32, 48, 0.05);
 }
 
+.member-detail-panel {
+  padding: 20px 18px;
+}
+
+.member-detail-form {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.admin-detail-form {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.member-form-notice {
+  display: grid;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.admin-form-notice {
+  display: grid;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.member-form-notice strong {
+  font-size: 16px;
+  color: #22372c;
+}
+
+.member-form-notice span {
+  color: #5f7a68;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.admin-form-notice strong {
+  font-size: 16px;
+  color: #22372c;
+}
+
+.admin-form-notice span {
+  color: #5f7a68;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.member-form-section {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  min-width: 0;
+  border: 1px solid #d8e2dc;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.admin-form-section {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  min-width: 0;
+  border: 1px solid #d8e2dc;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.member-form-section-emphasis {
+  border-color: #cfdcd5;
+}
+
+.member-form-section-head {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-form-section-head {
+  display: grid;
+  gap: 8px;
+}
+
+.member-form-section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-form-section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.member-form-section-head h3 {
+  margin: 0;
+  font-size: 25px;
+  line-height: 1.2;
+  color: #1f2823;
+}
+
+.admin-form-section-head h3 {
+  margin: 0;
+  font-size: 25px;
+  line-height: 1.2;
+  color: #1f2823;
+}
+
+.member-form-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #2e3431;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-form-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #2e3431;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.member-form-section-head p {
+  margin: 0;
+  color: #67776d;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.admin-form-section-head p {
+  margin: 0;
+  color: #67776d;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.member-form-grid {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.admin-form-grid {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.member-form-grid-basic {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+}
+
+.member-form-grid-weekly {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.member-form-grid-overall {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr) minmax(0, 0.8fr);
+}
+
+.member-form-grid-settlement {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.member-form-grid .span-3 {
+  grid-column: 1 / -1;
+}
+
+.member-form-grid label {
+  min-width: 0;
+  min-height: auto;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+  color: #2c4035;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.admin-form-grid label {
+  min-width: 0;
+  min-height: auto;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+  color: #2c4035;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.member-form-grid label input,
+.member-form-grid label textarea,
+.member-form-grid label .form-select__control {
+  margin-top: 0;
+}
+
+.admin-form-grid label input,
+.admin-form-grid label select,
+.admin-form-grid label textarea,
+.admin-form-grid label .member-select__control,
+.admin-form-grid label .form-select__control {
+  margin-top: 0;
+}
+
+.member-form-grid input,
+.member-form-grid textarea {
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid #cad7d0;
+  box-shadow: none;
+  background: #fff;
+}
+
+.member-form-grid textarea {
+  min-height: 92px;
+  padding: 12px 14px;
+  resize: vertical;
+}
+
+.admin-form-grid input,
+.admin-form-grid select,
+.admin-form-grid textarea {
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid #cad7d0;
+  box-shadow: none;
+  background: #fff;
+}
+
+.admin-form-grid textarea {
+  min-height: 92px;
+  padding: 12px 14px;
+  resize: vertical;
+}
+
+.member-form-grid input:focus,
+.member-form-grid textarea:focus {
+  border-color: #6cbf89;
+  box-shadow: 0 0 0 3px rgba(57, 181, 109, 0.12);
+}
+
+.admin-form-grid input:focus,
+.admin-form-grid select:focus,
+.admin-form-grid textarea:focus {
+  border-color: #6cbf89;
+  box-shadow: 0 0 0 3px rgba(57, 181, 109, 0.12);
+}
+
+.member-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 0 0;
+}
+
+.admin-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 0 0;
+}
+
+.member-form-actions [data-slot="button"] {
+  min-width: 148px;
+  height: 44px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: none;
+}
+
+.admin-form-actions [data-slot="button"] {
+  min-width: 148px;
+  height: 44px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: none;
+}
+
+.admin-form-actions-inline {
+  align-items: end;
+}
+
+.admin-form-grid-workout-basic {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.admin-form-grid-proof {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-form-grid-exception {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+}
+
+.admin-form-grid-filter {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.admin-form-full {
+  grid-column: 1 / -1;
+}
+
+.admin-form-helper-card {
+  min-height: 104px;
+  padding: 14px;
+  border: 1px dashed #bdd4c4;
+  border-radius: 16px;
+  background: #f8fcf9;
+  color: #496657;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+}
+
+.admin-form-helper-card strong {
+  font-size: 16px;
+  color: #233c2f;
+}
+
+.admin-form-helper-card p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.admin-form-feedback {
+  margin: 0;
+  color: #2f6c4c;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .file-field {
   position: relative;
   cursor: pointer;
-  min-height: 118px;
+  min-height: auto;
 }
 
 .file-field.is-dragging {
@@ -1723,18 +2099,20 @@ a {
 
 .file-control {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: linear-gradient(180deg, #ffffff 0%, #f3faf5 100%);
-  padding: 12px;
+  min-height: 72px;
+  align-content: center;
+  padding: 10px 12px;
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .file-title {
   color: #2f5d44;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
 }
 
@@ -1864,8 +2242,11 @@ textarea:focus {
 .table td {
   border-bottom: 1px solid var(--line);
   text-align: left;
-  padding: 12px 11px;
-  font-size: 17px;
+  padding: 9px 10px;
+  font-size: 15px;
+  line-height: 1.45;
+  vertical-align: middle;
+  word-break: keep-all;
   background: #fff;
 }
 
@@ -1891,7 +2272,7 @@ textarea:focus {
 }
 
 .path-cell {
-  max-width: 240px;
+  max-width: 190px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1908,9 +2289,9 @@ textarea:focus {
 }
 
 .login-panel {
-  width: min(1080px, 100%);
+  width: min(920px, 100%);
   display: grid;
-  grid-template-columns: minmax(320px, 1.05fr) minmax(360px, 0.95fr);
+  grid-template-columns: minmax(280px, 0.9fr) minmax(360px, 1fr);
   border-radius: 32px;
   overflow: visible;
   box-shadow: none;
@@ -1922,8 +2303,8 @@ textarea:focus {
 .login-hero {
   display: grid;
   place-items: center;
-  min-height: 640px;
-  padding: 42px 38px;
+  min-height: 520px;
+  padding: 32px 28px;
   background: transparent;
 }
 
@@ -1943,15 +2324,15 @@ textarea:focus {
 }
 
 .login-logo-wrap .logo-image {
-  width: min(280px, 56vw);
+  width: min(220px, 50vw);
   filter: drop-shadow(0 18px 30px rgba(18, 71, 43, 0.24));
 }
 
 .login-form-panel {
   display: grid;
   align-content: center;
-  gap: 24px;
-  padding: 48px 42px;
+  gap: 20px;
+  padding: 40px 36px;
   background:
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.18), transparent 28%),
     linear-gradient(180deg, #46b56f 0%, #2d9a58 100%);
@@ -1966,7 +2347,7 @@ textarea:focus {
 
 .login-form-head strong {
   color: #ffffff;
-  font-size: 34px;
+  font-size: 30px;
   line-height: 1.24;
 }
 
@@ -2089,6 +2470,24 @@ textarea:focus {
 }
 
 @media (max-width: 900px) {
+  .main-area,
+  .content,
+  .route-fade-in,
+  .page-stack,
+  .page-stack > section,
+  .panel,
+  .admin-detail-panel,
+  .admin-detail-form,
+  .admin-form-section {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100%;
+  }
+
+  .table-scroll {
+    max-width: 100%;
+  }
+
   .app-shell {
     padding: 12px;
     gap: 12px;
@@ -2240,6 +2639,68 @@ textarea:focus {
   .form-grid.member-goal-inline,
   .form-grid.goal-inline {
     grid-template-columns: 1fr;
+  }
+
+  .member-detail-panel {
+    padding: 18px 14px;
+  }
+
+  .member-form-section {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+
+  .admin-form-section {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+
+  .member-form-section-head h3 {
+    font-size: 24px;
+  }
+
+  .admin-form-section-head h3 {
+    font-size: 24px;
+  }
+
+  .member-form-grid-basic,
+  .member-form-grid-weekly,
+  .member-form-grid-overall,
+  .member-form-grid-settlement {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-form-grid-workout-basic,
+  .admin-form-grid-proof,
+  .admin-form-grid-exception,
+  .admin-form-grid-filter {
+    grid-template-columns: 1fr;
+  }
+
+  .member-form-grid label {
+    min-height: auto;
+  }
+
+  .admin-form-grid label {
+    min-height: auto;
+  }
+
+  .member-form-actions {
+    justify-content: stretch;
+    padding: 4px 0 0;
+  }
+
+  .admin-form-actions {
+    justify-content: stretch;
+    padding: 4px 0 0;
+  }
+
+  .member-form-actions [data-slot="button"] {
+    width: 100%;
+  }
+
+  .admin-form-actions [data-slot="button"] {
+    width: 100%;
   }
 
   .form-grid.member-inline > [data-slot="button"],
@@ -2399,8 +2860,8 @@ textarea:focus {
   display: inline-flex;
   flex-direction: column;
   gap: 4px;
-  min-width: 340px;
-  padding: 12px 16px;
+  min-width: 220px;
+  padding: 10px 14px;
   border: 2px solid #67b783;
   border-radius: 12px;
   background: #f4fbf6;
@@ -2416,7 +2877,7 @@ textarea:focus {
 
 .week-badge-date {
   color: #244934;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: 0.01em;
   line-height: 1.1;
@@ -2424,7 +2885,7 @@ textarea:focus {
 
 .week-badge-sub {
   color: #5f7366;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -2668,9 +3129,12 @@ textarea:focus {
 .row-actions {
   display: inline-flex;
   gap: 6px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .row-actions [data-slot="button"] {
+  min-height: 34px;
   padding: 5px 10px;
 }
 

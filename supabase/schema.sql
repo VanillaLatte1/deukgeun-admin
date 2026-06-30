@@ -8,6 +8,10 @@ create table if not exists public.members (
   overall_goal_value text,
   overall_goal_note text,
   overall_goal_achieved boolean,
+  penalty_amount integer not null default 100000 check (penalty_amount >= 0),
+  june_goal_proof_achieved boolean not null default false,
+  june_goal_proof_date date,
+  june_goal_proof_note text,
   created_at timestamptz not null default now()
 );
 
@@ -80,6 +84,12 @@ alter table public.members add column if not exists overall_goal_title text;
 alter table public.members add column if not exists overall_goal_value text;
 alter table public.members add column if not exists overall_goal_note text;
 alter table public.members add column if not exists overall_goal_achieved boolean;
+alter table public.members add column if not exists penalty_amount integer not null default 100000;
+alter table public.members add column if not exists june_goal_proof_achieved boolean not null default false;
+alter table public.members add column if not exists june_goal_proof_date date;
+alter table public.members add column if not exists june_goal_proof_note text;
+alter table public.members drop constraint if exists members_penalty_amount_check;
+alter table public.members add constraint members_penalty_amount_check check (penalty_amount >= 0);
 alter table public.workout_sessions add column if not exists exercise_type text not null default 'general';
 alter table public.workout_sessions alter column end_image_path drop not null;
 

@@ -63,32 +63,13 @@ export function WorkoutEntryForm({
     getWorkoutPolicy(WORKOUT_TYPE_GENERAL).defaultDurationMinutes,
   );
 
-  const policy = useMemo(() => getWorkoutPolicy(exerciseType), [exerciseType]);
-  const guideContent = useMemo(() => {
-    if (exerciseType === WORKOUT_TYPE_RUNNING) {
-      return {
-        title: "러닝 등록 안내",
-        description: "러닝은 인증 사진 1장과 운동 시간을 직접 입력해 등록합니다.",
-        accent: "사진 1장, 시간 직접 입력",
-      };
-    }
-
-    return {
-      title: "일반 운동 등록 안내",
-      description: "일반 운동은 시작 이미지와 종료 이미지를 모두 등록하고 운동 시간을 직접 입력해 저장합니다.",
-      accent: "사진 2장, 시간 직접 입력",
-    };
-  }, [exerciseType]);
-  const showSuccessModal =
-    state.ok && state.submittedAt > 0 && state.submittedAt !== dismissedAt;
-  const formKey = state.ok ? state.submittedAt : dismissedAt;
-
   const mounted = useSyncExternalStore(
     () => () => {},
     () => true,
     () => false,
   );
 
+  const policy = useMemo(() => getWorkoutPolicy(exerciseType), [exerciseType]);
   const takenSessions = useMemo(() => {
     if (!selectedMemberId || !selectedWorkoutDate) {
       return new Set<string>();
@@ -120,9 +101,13 @@ export function WorkoutEntryForm({
     () => sessionOptions.find((option) => !option.disabled)?.value ?? "",
     [sessionOptions],
   );
+
   const effectiveSessionNo =
     selectedSessionNo && !takenSessions.has(selectedSessionNo) ? selectedSessionNo : availableSession;
   const isExcusedMember = excusedMemberIds.includes(selectedMemberId);
+  const showSuccessModal =
+    state.ok && state.submittedAt > 0 && state.submittedAt !== dismissedAt;
+  const formKey = state.ok ? state.submittedAt : dismissedAt;
 
   if (!mounted) {
     return null;
@@ -146,108 +131,152 @@ export function WorkoutEntryForm({
 
   return (
     <>
-      <form key={formKey} action={formAction} className="form-grid workout-form-grid">
+      <form key={formKey} action={formAction} className="admin-detail-form">
         <input type="hidden" name="session_no" value={effectiveSessionNo} />
 
-        <div className="span-2 workout-guide-card">
-          <div>
-            <span className="workout-guide-kicker">{guideContent.accent}</span>
-            <strong>{guideContent.title}</strong>
-          </div>
-          <p>{guideContent.description}</p>
+        <div className="admin-form-notice">
+          <strong>운동 인증 등록 전 필수 항목을 확인해 주세요.</strong>
+          <span>
+            일반 운동은 시작 사진과 종료 사진이 모두 필요하고, 러닝은 인증 사진 1장만 등록하면
+            됩니다.
+          </span>
         </div>
 
-        <MemberSearchSelect
-          members={members}
-          name="member_id"
-          label="회원"
-          selectedValue={selectedMemberId}
-          onValueChange={setSelectedMemberId}
-        />
+        <section className="admin-form-section">
+          <div className="admin-form-section-head">
+            <div className="admin-form-section-title-row">
+              <h3>회원 및 운동 정보</h3>
+              <span className="admin-form-step">1</span>
+            </div>
+            <p>회원, 날짜, 운동 종류, 기본 시간을 먼저 설정합니다.</p>
+          </div>
 
-        {isExcusedMember ? (
-          <p className="error span-2">
-            이 회원은 이번 주 진행 체크에서 제외 처리되어 있습니다. 기록은 등록할 수 있지만 대시보드 진행률에서는 제외됩니다.
-          </p>
-        ) : null}
-
-        <label>
-          운동 날짜
-          <input
-            type="date"
-            name="workout_date"
-            required
-            value={selectedWorkoutDate}
-            onChange={(event) => setSelectedWorkoutDate(event.target.value)}
-          />
-        </label>
-
-        <div className="span-2 workout-inline-triplet">
-          <label>
-            회차
-            <input
-              type="text"
-              value={effectiveSessionNo ? `${effectiveSessionNo}회차 자동 배정` : "배정 가능한 회차 없음"}
-              readOnly
+          <div className="admin-form-grid admin-form-grid-workout-basic">
+            <MemberSearchSelect
+              members={members}
+              name="member_id"
+              label="회원"
+              selectedValue={selectedMemberId}
+              onValueChange={setSelectedMemberId}
             />
-          </label>
 
-          <label>
-            운동 종류
-            <select
-              name="exercise_type"
-              value={exerciseType}
-              onChange={(event) => handleExerciseTypeChange(event.target.value)}
-            >
-              <option value={WORKOUT_TYPE_GENERAL}>일반 운동</option>
-              <option value={WORKOUT_TYPE_RUNNING}>러닝</option>
-            </select>
-          </label>
+            <label>
+              운동 날짜
+              <input
+                type="date"
+                name="workout_date"
+                required
+                value={selectedWorkoutDate}
+                onChange={(event) => setSelectedWorkoutDate(event.target.value)}
+              />
+            </label>
 
-          <label>
-            운동 시간(분)
-            <input
-              type="number"
-              name="duration_minutes"
-              min={policy.minimumValidMinutes}
-              value={durationMinutes}
-              onChange={(event) => setDurationMinutes(Number(event.target.value))}
+            <label>
+              회차
+              <input
+                type="text"
+                value={
+                  effectiveSessionNo
+                    ? `${effectiveSessionNo}회차 자동 배정`
+                    : "배정 가능한 회차 없음"
+                }
+                readOnly
+              />
+            </label>
+
+            <label>
+              운동 종류
+              <select
+                name="exercise_type"
+                value={exerciseType}
+                onChange={(event) => handleExerciseTypeChange(event.target.value)}
+              >
+                <option value={WORKOUT_TYPE_GENERAL}>일반 운동</option>
+                <option value={WORKOUT_TYPE_RUNNING}>러닝</option>
+              </select>
+            </label>
+
+            <label>
+              운동 시간(분)
+              <input
+                type="number"
+                name="duration_minutes"
+                min={policy.minimumValidMinutes}
+                value={durationMinutes}
+                onChange={(event) => setDurationMinutes(Number(event.target.value))}
+                required
+              />
+            </label>
+          </div>
+
+          {isExcusedMember ? (
+            <p className="error">
+              이 회원은 이번 주 제외 처리 상태입니다. 기록은 남길 수 있지만 진행률 집계에서는
+              제외됩니다.
+            </p>
+          ) : null}
+
+          {selectedMemberId && !availableSession ? (
+            <p className="error">선택한 회원은 이번 주 1~5회차 인증이 모두 등록되어 있습니다.</p>
+          ) : null}
+        </section>
+
+        <section className="admin-form-section">
+          <div className="admin-form-section-head">
+            <div className="admin-form-section-title-row">
+              <h3>인증 이미지</h3>
+              <span className="admin-form-step">2</span>
+            </div>
+            <p>
+              {policy.requiredImageCount === 1
+                ? "러닝은 인증 사진 1장만 업로드합니다."
+                : "일반 운동은 시작과 종료 이미지를 각각 업로드합니다."}
+            </p>
+          </div>
+
+          <div className="admin-form-grid admin-form-grid-proof">
+            <FileInputField
+              label={policy.requiredImageCount === 1 ? "인증 이미지" : "시작 이미지"}
+              name="start_image"
               required
             />
-          </label>
+
+            {policy.requiredImageCount === 2 ? (
+              <FileInputField label="종료 이미지" name="end_image" required />
+            ) : (
+              <div className="admin-form-helper-card">
+                <strong>러닝 등록 안내</strong>
+                <p>러닝은 종료 이미지 없이 등록되며, 최소 30분 이상 운동 시간 입력이 필요합니다.</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="admin-form-section">
+          <div className="admin-form-section-head">
+            <div className="admin-form-section-title-row">
+              <h3>추가 메모</h3>
+              <span className="admin-form-step">3</span>
+            </div>
+            <p>특이사항이 있을 때만 간단히 남겨 주세요.</p>
+          </div>
+
+          <div className="admin-form-grid">
+            <label className="admin-form-full">
+              메모(선택)
+              <textarea name="notes" rows={4} placeholder="예: 기기 화면 흐림, 수동 확인 필요" />
+            </label>
+          </div>
+        </section>
+
+        {!state.ok && state.message ? <p className="error">{state.message}</p> : null}
+
+        <div className="admin-form-actions">
+          <Button type="submit" size="lg" disabled={isPending || !availableSession}>
+            {isPending ? "등록 중..." : "인증 등록"}
+          </Button>
         </div>
-
-        <FileInputField
-          label={policy.requiredImageCount === 1 ? "인증 이미지" : "시작 이미지"}
-          name="start_image"
-          required
-        />
-
-        {policy.requiredImageCount === 2 ? (
-          <FileInputField
-            label="종료 이미지"
-            name="end_image"
-            required
-          />
-        ) : null}
-
-        <label className="span-2">
-          메모 (선택)
-          <textarea name="notes" rows={3} />
-        </label>
-
-        <Button type="submit" disabled={isPending || !availableSession}>
-          {isPending ? "등록 중..." : "인증 등록"}
-        </Button>
       </form>
-
-      {selectedMemberId && !availableSession ? (
-        <p className="error">선택한 회원은 해당 주간의 1~5회차 인증이 모두 등록되어 있습니다.</p>
-      ) : null}
-
-      {!state.ok && state.message ? (
-        <p className="error">{state.message}</p>
-      ) : null}
 
       <Modal
         open={showSuccessModal}

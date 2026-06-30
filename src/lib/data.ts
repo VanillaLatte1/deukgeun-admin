@@ -2,6 +2,10 @@ import { createSupabaseAdmin } from "@/lib/supabase-server";
 import { toWorkoutType, type WorkoutType } from "@/lib/workout-policy";
 
 export const COMMUNITY_START_WEEK = "2026-02-01";
+export const FIRST_HALF_2026_PROOF_END = "2026-06-27";
+export const FIRST_HALF_2026_FINAL_DEADLINE = "2026-06-30";
+export const FIRST_HALF_2026_JUNE_PROOF_START = "2026-06-01";
+export const FIRST_HALF_2026_JUNE_PROOF_END = "2026-06-30";
 
 export type Member = {
   id: string;
@@ -11,6 +15,10 @@ export type Member = {
   overall_goal_value: string | null;
   overall_goal_note: string | null;
   overall_goal_achieved: boolean | null;
+  penalty_amount: number;
+  june_goal_proof_achieved: boolean;
+  june_goal_proof_date: string | null;
+  june_goal_proof_note: string | null;
   created_at: string;
 };
 
@@ -81,6 +89,11 @@ export type PenaltyDocumentSummary = {
   shortfallWeekStarts: string[];
   weeklyFineAmount: number;
   finalGoalAchieved: boolean | null;
+  penaltyAmount: number;
+  hasJuneGoalProof: boolean;
+  juneGoalProofDate: string | null;
+  finalFineRate: number;
+  finalFineReason: string;
   finalFineAmount: number;
   totalFineAmount: number;
 };
@@ -118,7 +131,7 @@ function getWeekRange(weekStart: string) {
 export async function listMembers() {
   const supabase = createSupabaseAdmin();
   const fullSelect =
-    "id, name, gender, overall_goal_title, overall_goal_value, overall_goal_note, overall_goal_achieved, created_at";
+    "id, name, gender, overall_goal_title, overall_goal_value, overall_goal_note, overall_goal_achieved, penalty_amount, june_goal_proof_achieved, june_goal_proof_date, june_goal_proof_note, created_at";
   const { data, error } = await supabase
     .from("members")
     .select(fullSelect)
@@ -143,13 +156,27 @@ export async function listMembers() {
     throw fallbackError;
   }
 
-  return ((fallbackData ?? []) as Omit<Member, "overall_goal_title" | "overall_goal_value" | "overall_goal_note" | "overall_goal_achieved">[]).map(
+  return ((fallbackData ?? []) as Omit<
+    Member,
+    | "overall_goal_title"
+    | "overall_goal_value"
+    | "overall_goal_note"
+    | "overall_goal_achieved"
+    | "penalty_amount"
+    | "june_goal_proof_achieved"
+    | "june_goal_proof_date"
+    | "june_goal_proof_note"
+  >[]).map(
     (member) => ({
       ...member,
       overall_goal_title: null,
       overall_goal_value: null,
       overall_goal_note: null,
       overall_goal_achieved: null,
+      penalty_amount: 100_000,
+      june_goal_proof_achieved: false,
+      june_goal_proof_date: null,
+      june_goal_proof_note: null,
     }),
   );
 }
@@ -157,7 +184,7 @@ export async function listMembers() {
 export async function getMemberById(memberId: string) {
   const supabase = createSupabaseAdmin();
   const fullSelect =
-    "id, name, gender, overall_goal_title, overall_goal_value, overall_goal_note, overall_goal_achieved, created_at";
+    "id, name, gender, overall_goal_title, overall_goal_value, overall_goal_note, overall_goal_achieved, penalty_amount, june_goal_proof_achieved, june_goal_proof_date, june_goal_proof_note, created_at";
   const { data, error } = await supabase
     .from("members")
     .select(fullSelect)
@@ -189,12 +216,23 @@ export async function getMemberById(memberId: string) {
   return {
     ...(fallbackData as Omit<
       Member,
-      "overall_goal_title" | "overall_goal_value" | "overall_goal_note" | "overall_goal_achieved"
+      | "overall_goal_title"
+      | "overall_goal_value"
+      | "overall_goal_note"
+      | "overall_goal_achieved"
+      | "penalty_amount"
+      | "june_goal_proof_achieved"
+      | "june_goal_proof_date"
+      | "june_goal_proof_note"
     >),
     overall_goal_title: null,
     overall_goal_value: null,
     overall_goal_note: null,
     overall_goal_achieved: null,
+    penalty_amount: 100_000,
+    june_goal_proof_achieved: false,
+    june_goal_proof_date: null,
+    june_goal_proof_note: null,
   };
 }
 
@@ -461,7 +499,12 @@ export function getHalfYearRange(
 ): HalfYearRange {
   const halfStart = half === "1" ? `${year}-01-01` : `${year}-07-01`;
   const from = COMMUNITY_START_WEEK > halfStart ? COMMUNITY_START_WEEK : halfStart;
-  const maxTo = half === "1" ? `${year}-06-30` : `${year}-12-31`;
+  const maxTo =
+    year === 2026 && half === "1"
+      ? FIRST_HALF_2026_PROOF_END
+      : half === "1"
+        ? `${year}-06-30`
+        : `${year}-12-31`;
   const today = toYmd(new Date());
   const effectiveMaxTo = clampDateYmd(today, from, maxTo);
   const availableWeekStarts = getWeekStartsWithinDates(from, effectiveMaxTo);
@@ -482,6 +525,63 @@ export function getHalfYearRange(
     selectedWeekStart,
     defaultWeekStart,
     maxWeekStart,
+  };
+}
+
+function isWithinYmd(value: string | null, from: string, toInclusive: string) {
+  return Boolean(value && value >= from && value <= toInclusive);
+}
+
+function getFinalFinePolicy(member: Member, year: number, half: HalfYearKey) {
+  const penaltyAmount = member.penalty_amount ?? 100_000;
+
+  if (member.overall_goal_achieved === true) {
+    return {
+      penaltyAmount,
+      hasJuneGoalProof: Boolean(member.june_goal_proof_achieved),
+      finalFineRate: 0,
+      finalFineAmount: 0,
+      finalFineReason: "6월 30일까지 목표 달성 및 유지",
+    };
+  }
+
+  if (member.overall_goal_achieved === null) {
+    return {
+      penaltyAmount,
+      hasJuneGoalProof: Boolean(member.june_goal_proof_achieved),
+      finalFineRate: 0,
+      finalFineAmount: 0,
+      finalFineReason: "최종 목표 판정 미설정",
+    };
+  }
+
+  const hasJuneGoalProof =
+    half === "1" &&
+    member.june_goal_proof_achieved &&
+    (year === 2026
+      ? isWithinYmd(
+          member.june_goal_proof_date,
+          FIRST_HALF_2026_JUNE_PROOF_START,
+          FIRST_HALF_2026_JUNE_PROOF_END,
+        )
+      : isWithinYmd(member.june_goal_proof_date, `${year}-06-01`, `${year}-06-30`));
+
+  if (hasJuneGoalProof) {
+    return {
+      penaltyAmount,
+      hasJuneGoalProof,
+      finalFineRate: 0.5,
+      finalFineAmount: Math.round(penaltyAmount * 0.5),
+      finalFineReason: "6월 중 목표 도달 증적 확인",
+    };
+  }
+
+  return {
+    penaltyAmount,
+    hasJuneGoalProof,
+    finalFineRate: 1,
+    finalFineAmount: penaltyAmount,
+    finalFineReason: "최종 목표 미달성 또는 6월 목표 도달 증적 없음",
   };
 }
 
@@ -534,7 +634,7 @@ export async function getPenaltyDocumentData(
     const completedSessionsTotal = doneTotalByMember.get(member.id) ?? 0;
     const finalGoalAchieved = member.overall_goal_achieved;
     const weeklyFineAmount = shortfallWeeks * 20_000;
-    const finalFineAmount = finalGoalAchieved === false ? 100_000 : 0;
+    const finalFinePolicy = getFinalFinePolicy(member, year, half);
 
     return {
       member,
@@ -547,8 +647,13 @@ export async function getPenaltyDocumentData(
       shortfallWeekStarts,
       weeklyFineAmount,
       finalGoalAchieved,
-      finalFineAmount,
-      totalFineAmount: weeklyFineAmount + finalFineAmount,
+      penaltyAmount: finalFinePolicy.penaltyAmount,
+      hasJuneGoalProof: finalFinePolicy.hasJuneGoalProof,
+      juneGoalProofDate: member.june_goal_proof_date,
+      finalFineRate: finalFinePolicy.finalFineRate,
+      finalFineReason: finalFinePolicy.finalFineReason,
+      finalFineAmount: finalFinePolicy.finalFineAmount,
+      totalFineAmount: weeklyFineAmount + finalFinePolicy.finalFineAmount,
     };
   });
 

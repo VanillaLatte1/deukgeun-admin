@@ -54,80 +54,91 @@ export function WeeklyExceptionManager({
 
   return (
     <>
-      <section className="panel">
-        <div className="section-head">
-          <div>
-            <h3>제외 등록</h3>
-            <p className="weekly-exceptions-subcopy">
-              {weekStart} 주차에서 진행 체크를 빼야 하는 회원을 등록합니다.
-            </p>
+      <section className="panel admin-detail-panel">
+        <form action={createAction} className="admin-detail-form">
+          <div className="admin-form-notice">
+            <strong>{weekStart} 주차의 제외 대상을 여기서 관리합니다.</strong>
+            <span>해당 주차에서 진행 체크를 빼야 하는 회원만 선택해서 등록해 주세요.</span>
           </div>
-        </div>
 
-        <form action={createAction} className="form-grid weekly-exception-form">
-          <input type="hidden" name="week_start" value={weekStart} />
+          <section className="admin-form-section">
+            <div className="admin-form-section-head">
+              <div className="admin-form-section-title-row">
+                <h3>제외 대상 등록</h3>
+                <span className="admin-form-step">1</span>
+              </div>
+              <p>회원과 사유를 입력하면 바로 해당 주차 제외 처리에 반영됩니다.</p>
+            </div>
 
-          <label className="weekly-exception-member-field">
-            제외 회원
-            <select name="member_id" required defaultValue="">
-              <option value="" disabled>
-                회원 선택
-              </option>
-              {availableMembers.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.name}
-                </option>
-              ))}
-            </select>
-          </label>
+            <input type="hidden" name="week_start" value={weekStart} />
 
-          <label>
-            사유
-            <input type="text" name="reason" placeholder="예: 허리 통증, 출장, 감기" />
-          </label>
+            <div className="admin-form-grid admin-form-grid-exception">
+              <label>
+                제외 회원
+                <select name="member_id" required defaultValue="">
+                  <option value="" disabled>
+                    회원 선택
+                  </option>
+                  {availableMembers.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-          <Button type="submit" disabled={createPending || availableMembers.length === 0}>
-            {createPending ? "처리 중..." : "제외 처리"}
-          </Button>
+              <label>
+                제외 사유
+                <input type="text" name="reason" placeholder="예: 출장, 감기, 개인 일정" />
+              </label>
+            </div>
+          </section>
+
+          {feedback ? (
+            <p className={isSuccess ? "admin-form-feedback" : "error"}>{feedback}</p>
+          ) : null}
+
+          <div className="admin-form-actions">
+            <Button type="submit" size="lg" disabled={createPending || availableMembers.length === 0}>
+              {createPending ? "처리 중..." : "제외 처리"}
+            </Button>
+          </div>
         </form>
-
-        {feedback ? (
-          <p className={isSuccess ? "weekly-exceptions-subcopy" : "error"}>{feedback}</p>
-        ) : null}
       </section>
 
-      <section className="panel">
-        <div className="section-head">
-          <div>
-            <h3>등록된 제외 회원</h3>
-            <p className="weekly-exceptions-subcopy">
-              이미 제외 처리된 회원은 여기에서 바로 해제할 수 있습니다.
-            </p>
-          </div>
-        </div>
-
-        <div className="dashboard-status-stack">
-          {exceptions.length > 0 ? (
-            exceptions.map((item) => (
-              <div className="dashboard-status-card" key={`${item.member_id}-${item.week_start}`}>
-                <div className="dashboard-status-head">
-                  <strong>{item.members?.name ?? "-"}</strong>
-                  <form action={deleteAction}>
-                    <input type="hidden" name="member_id" value={item.member_id} />
-                    <input type="hidden" name="week_start" value={item.week_start} />
-                    <Button type="submit" disabled={deletePending}>
-                      해제
-                    </Button>
-                  </form>
-                </div>
-                <p className="dashboard-status-copy">{item.reason?.trim() || "사유 없음"}</p>
-              </div>
-            ))
-          ) : (
-            <div className="weekly-exceptions-empty">
-              <p className="weekly-exceptions-subcopy">이번 주 제외 처리된 회원이 없습니다.</p>
+      <section className="panel admin-detail-panel">
+        <div className="admin-form-section">
+          <div className="admin-form-section-head">
+            <div className="admin-form-section-title-row">
+              <h3>등록된 제외 대상</h3>
+              <span className="admin-form-step">{exceptions.length}</span>
             </div>
-          )}
+            <p>이미 제외된 회원은 아래 목록에서 바로 해제할 수 있습니다.</p>
+          </div>
+
+          <div className="dashboard-status-stack">
+            {exceptions.length > 0 ? (
+              exceptions.map((item) => (
+                <div className="dashboard-status-card" key={`${item.member_id}-${item.week_start}`}>
+                  <div className="dashboard-status-head">
+                    <strong>{item.members?.name ?? "-"}</strong>
+                    <form action={deleteAction}>
+                      <input type="hidden" name="member_id" value={item.member_id} />
+                      <input type="hidden" name="week_start" value={item.week_start} />
+                      <Button type="submit" variant="outline" disabled={deletePending}>
+                        해제
+                      </Button>
+                    </form>
+                  </div>
+                  <p className="dashboard-status-copy">{item.reason?.trim() || "사유 없음"}</p>
+                </div>
+              ))
+            ) : (
+              <div className="weekly-exceptions-empty">
+                <p className="weekly-exceptions-subcopy">이번 주 제외 처리된 회원이 없습니다.</p>
+              </div>
+            )}
+          </div>
         </div>
       </section>
     </>

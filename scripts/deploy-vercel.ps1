@@ -12,6 +12,57 @@ function Require-Command {
     $null = Get-Command $Command -ErrorAction Stop
 }
 
+function Get-UrlFromLine {
+    param(
+        [string]$Line
+    )
+
+    if ($Line -match '(https://[^\s\[]+)') {
+        return $matches[1]
+    }
+
+    return $null
+}
+
+function Get-DeploymentUrl {
+    param(
+        [string[]]$Lines
+    )
+
+    $productionLine = $Lines |
+        Where-Object { $_ -match 'Production:\s+https://[^\s]+' } |
+        Select-Object -Last 1
+
+    if ($productionLine) {
+        $productionUrl = Get-UrlFromLine -Line $productionLine
+        if ($productionUrl) {
+            return $productionUrl
+        }
+    }
+
+    $deploymentPattern = 'https://[a-z0-9-]+-[a-z0-9]+-[a-z0-9-]+\.vercel\.app'
+    $deploymentLine = $Lines |
+        Where-Object { $_ -match $deploymentPattern } |
+        Select-Object -Last 1
+
+    if ($deploymentLine) {
+        $deploymentUrl = Get-UrlFromLine -Line $deploymentLine
+        if ($deploymentUrl) {
+            return $deploymentUrl
+        }
+    }
+
+    $genericLine = $Lines |
+        Where-Object { $_ -match 'https://[^\s]+\.vercel\.app' } |
+        Select-Object -Last 1
+
+    if ($genericLine) {
+        return Get-UrlFromLine -Line $genericLine
+    }
+
+    return $null
+}
+
 Write-Host "[1/4] Checking prerequisites..."
 
 if (-not (Test-Path ".env")) {
@@ -28,17 +79,18 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "[3/4] Deploying to Vercel production..."
-$deployOutput = npx vercel deploy --prod --yes
+$deployOutput = npx vercel deploy --prod --yes 2>&1
 if ($LASTEXITCODE -ne 0) {
     throw "Vercel deployment failed."
 }
 
-$deployUrl = $deployOutput | Select-String -Pattern '^https://.*$' | Select-Object -Last 1
-if (-not $deployUrl) {
+$deployLines = @($deployOutput | ForEach-Object { "$_" })
+$deployment = Get-DeploymentUrl -Lines $deployLines
+
+if (-not $deployment) {
     throw "Deployment did not return a deployment URL."
 }
 
-$deployment = $deployUrl.ToString().Trim()
 Write-Host "Deployment URL: $deployment"
 
 if ($Alias) {

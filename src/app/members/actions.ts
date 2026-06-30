@@ -33,6 +33,48 @@ function parseOverallGoalAchieved(value: FormDataEntryValue | null) {
   return null;
 }
 
+function parseBoolean(value: FormDataEntryValue | null) {
+  return String(value ?? "").trim().toLowerCase() === "true";
+}
+
+function parsePenaltyAmount(value: FormDataEntryValue | null) {
+  const raw = String(value ?? "").trim();
+  const amount = raw ? Number(raw) : 100_000;
+  if (!Number.isFinite(amount) || amount < 0) {
+    throw new Error("본인 설정 벌금액을 올바르게 입력하세요.");
+  }
+
+  return Math.round(amount);
+}
+
+function parseOptionalDate(value: FormDataEntryValue | null) {
+  const date = String(value ?? "").trim();
+  if (!date) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error("증적 날짜를 올바르게 입력하세요.");
+  }
+
+  return date;
+}
+
+function getSettlementFields(formData: FormData) {
+  const penaltyAmount = parsePenaltyAmount(formData.get("penalty_amount"));
+  const juneGoalProofAchieved = parseBoolean(formData.get("june_goal_proof_achieved"));
+  const juneGoalProofDate = parseOptionalDate(formData.get("june_goal_proof_date"));
+  const juneGoalProofNote = String(formData.get("june_goal_proof_note") ?? "").trim();
+
+  if (juneGoalProofAchieved && !juneGoalProofDate) {
+    throw new Error("6월 목표 도달 증적이 있으면 증적 날짜를 입력하세요.");
+  }
+
+  return {
+    penalty_amount: penaltyAmount,
+    june_goal_proof_achieved: juneGoalProofAchieved,
+    june_goal_proof_date: juneGoalProofAchieved ? juneGoalProofDate : null,
+    june_goal_proof_note: juneGoalProofAchieved ? juneGoalProofNote || null : null,
+  };
+}
+
 function memberSuccess(message: string): MemberActionState {
   return { ok: true, message, submittedAt: Date.now() };
 }
@@ -46,8 +88,8 @@ export async function createMember(formData: FormData) {
   const gender = String(formData.get("gender") ?? "").trim();
   const overallGoalTitle = String(formData.get("overall_goal_title") ?? "").trim();
   const overallGoalValue = String(formData.get("overall_goal_value") ?? "").trim();
-  const overallGoalNote = String(formData.get("overall_goal_note") ?? "").trim();
   const overallGoalAchieved = parseOverallGoalAchieved(formData.get("overall_goal_achieved"));
+  const settlementFields = getSettlementFields(formData);
 
   if (!name) {
     throw new Error("회원 이름은 필수입니다.");
@@ -63,8 +105,9 @@ export async function createMember(formData: FormData) {
     gender,
     overall_goal_title: overallGoalTitle || null,
     overall_goal_value: overallGoalValue || null,
-    overall_goal_note: overallGoalNote || null,
+    overall_goal_note: null,
     overall_goal_achieved: overallGoalAchieved,
+    ...settlementFields,
   };
 
   const { error } = await supabase.from("members").insert(payload);
@@ -95,8 +138,8 @@ export async function createMemberWithGoal(formData: FormData) {
   const targetMinutes = Number(formData.get("target_minutes") ?? 0);
   const overallGoalTitle = String(formData.get("overall_goal_title") ?? "").trim();
   const overallGoalValue = String(formData.get("overall_goal_value") ?? "").trim();
-  const overallGoalNote = String(formData.get("overall_goal_note") ?? "").trim();
   const overallGoalAchieved = parseOverallGoalAchieved(formData.get("overall_goal_achieved"));
+  const settlementFields = getSettlementFields(formData);
 
   if (!name) {
     throw new Error("회원 이름은 필수입니다.");
@@ -121,8 +164,9 @@ export async function createMemberWithGoal(formData: FormData) {
     gender,
     overall_goal_title: overallGoalTitle || null,
     overall_goal_value: overallGoalValue || null,
-    overall_goal_note: overallGoalNote || null,
+    overall_goal_note: null,
     overall_goal_achieved: overallGoalAchieved,
+    ...settlementFields,
   };
 
   const { data: insertedMember, error: memberError } = await supabase
@@ -208,8 +252,8 @@ export async function updateMemberWithGoal(formData: FormData) {
   const targetMinutes = Number(formData.get("target_minutes") ?? 0);
   const overallGoalTitle = String(formData.get("overall_goal_title") ?? "").trim();
   const overallGoalValue = String(formData.get("overall_goal_value") ?? "").trim();
-  const overallGoalNote = String(formData.get("overall_goal_note") ?? "").trim();
   const overallGoalAchieved = parseOverallGoalAchieved(formData.get("overall_goal_achieved"));
+  const settlementFields = getSettlementFields(formData);
 
   if (!memberId) {
     throw new Error("수정할 회원 정보가 없습니다.");
@@ -240,8 +284,9 @@ export async function updateMemberWithGoal(formData: FormData) {
       gender,
       overall_goal_title: overallGoalTitle || null,
       overall_goal_value: overallGoalValue || null,
-      overall_goal_note: overallGoalNote || null,
+      overall_goal_note: null,
       overall_goal_achieved: overallGoalAchieved,
+      ...settlementFields,
     })
     .eq("id", memberId);
 

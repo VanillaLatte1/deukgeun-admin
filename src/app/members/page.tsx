@@ -3,6 +3,8 @@ import { SupabaseRequiredPanel } from "@/components/supabase-required-panel";
 import { listFixedGoals, listMembers } from "@/lib/data";
 import { isSupabaseReady } from "@/lib/supabase-server";
 
+export const dynamic = "force-dynamic";
+
 function genderLabel(gender: string | null) {
   if (gender === "M") return "남성";
   if (gender === "F") return "여성";
@@ -12,7 +14,6 @@ function genderLabel(gender: string | null) {
 function overallGoalLabel(member: {
   overall_goal_title: string | null;
   overall_goal_value: string | null;
-  overall_goal_note: string | null;
   overall_goal_achieved: boolean | null;
 }) {
   const parts = [member.overall_goal_title, member.overall_goal_value].filter(Boolean);
@@ -24,13 +25,34 @@ function overallGoalLabel(member: {
         ? "도달"
         : "미도달";
 
-  const noteParts = [member.overall_goal_note, status].filter(Boolean);
-
-  if (base && noteParts.length > 0) {
-    return `${base} (${noteParts.join(" / ")})`;
+  if (base && status) {
+    return `${base} (${status})`;
   }
 
-  return base || noteParts.join(" / ") || "-";
+  return base || status || "-";
+}
+
+function settlementLabel(member: {
+  overall_goal_achieved: boolean | null;
+  penalty_amount: number;
+  june_goal_proof_achieved: boolean;
+  june_goal_proof_date: string | null;
+}) {
+  const amount = `${member.penalty_amount.toLocaleString("ko-KR")}원`;
+
+  if (member.overall_goal_achieved === null) {
+    return `${amount} / 판정 미설정`;
+  }
+
+  if (member.overall_goal_achieved) {
+    return `${amount} / 벌금 없음`;
+  }
+
+  if (member.june_goal_proof_achieved && member.june_goal_proof_date) {
+    return `${amount} / 50%`;
+  }
+
+  return `${amount} / 100%`;
 }
 
 export default async function MembersPage() {
@@ -47,16 +69,10 @@ export default async function MembersPage() {
     return {
       id: member.id,
       name: member.name,
-      gender: member.gender,
-      overallGoalTitle: member.overall_goal_title,
-      overallGoalValue: member.overall_goal_value,
-      overallGoalNote: member.overall_goal_note,
-      overallGoalAchieved: member.overall_goal_achieved,
-      overallGoalLabel: overallGoalLabel(member),
       genderLabel: genderLabel(member.gender),
-      targetSessions: goal?.target_sessions ?? 2,
+      overallGoalLabel: overallGoalLabel(member),
+      settlementLabel: settlementLabel(member),
       targetSessionsLabel: `${goal?.target_sessions ?? 0}회`,
-      targetMinutes: goal?.target_minutes ?? 60,
       targetMinutesLabel: `${goal?.target_minutes ?? 0}분`,
       createdAtLabel: new Date(member.created_at).toLocaleDateString("ko-KR"),
     };

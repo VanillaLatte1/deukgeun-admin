@@ -1,32 +1,18 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Plus, UsersRound } from "lucide-react";
-import { useRouter } from "next/navigation";
 
-import {
-  createMemberWithGoalAction,
-  type MemberActionState,
-  updateMemberWithGoalAction,
-} from "@/app/members/actions";
-import { FormSelectField } from "@/components/form-select-field";
 import { MembersTable } from "@/components/members-table";
-import { Modal } from "@/components/modal";
 import { Button } from "@/components/ui/button";
 
 type MemberRow = {
   id: string;
   name: string;
-  gender: string | null;
   genderLabel: string;
-  overallGoalTitle: string | null;
-  overallGoalValue: string | null;
-  overallGoalNote: string | null;
-  overallGoalAchieved: boolean | null;
   overallGoalLabel: string;
-  targetSessions: number;
+  settlementLabel: string;
   targetSessionsLabel: string;
-  targetMinutes: number;
   targetMinutesLabel: string;
   createdAtLabel: string;
 };
@@ -35,118 +21,7 @@ type MembersManagerProps = {
   members: MemberRow[];
 };
 
-const initialActionState: MemberActionState = {
-  ok: false,
-  message: "",
-  submittedAt: 0,
-};
-
-function GoalFields({
-  member,
-}: {
-  member?: {
-    overallGoalTitle: string | null;
-    overallGoalValue: string | null;
-    overallGoalNote: string | null;
-    overallGoalAchieved: boolean | null;
-  } | null;
-}) {
-  const achievedValue =
-    member?.overallGoalAchieved === null || member?.overallGoalAchieved === undefined
-      ? ""
-      : member.overallGoalAchieved
-        ? "true"
-        : "false";
-
-  return (
-    <>
-      <label>
-        목표 항목
-        <input
-          type="text"
-          name="overall_goal_title"
-          placeholder="예: 골격근량 증가"
-          defaultValue={member?.overallGoalTitle ?? ""}
-        />
-      </label>
-      <label>
-        목표 수치
-        <input
-          type="text"
-          name="overall_goal_value"
-          placeholder="예: +2kg"
-          defaultValue={member?.overallGoalValue ?? ""}
-        />
-      </label>
-      <label className="span-2">
-        목표 메모
-        <input
-          type="text"
-          name="overall_goal_note"
-          placeholder="예: 6월 말까지 달성"
-          defaultValue={member?.overallGoalNote ?? ""}
-        />
-      </label>
-      <FormSelectField
-        label="최종 목표 도달 여부"
-        name="overall_goal_achieved"
-        defaultValue={achievedValue}
-        placeholder="미설정"
-        options={[
-          { value: "true", label: "도달" },
-          { value: "false", label: "미도달" },
-        ]}
-        isClearable
-      />
-    </>
-  );
-}
-
 export function MembersManager({ members }: MembersManagerProps) {
-  const router = useRouter();
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [dismissedAt, setDismissedAt] = useState(0);
-
-  const [createState, createAction, createPending] = useActionState(
-    createMemberWithGoalAction,
-    initialActionState,
-  );
-  const [updateState, updateAction, updatePending] = useActionState(
-    updateMemberWithGoalAction,
-    initialActionState,
-  );
-
-  const editingMember = useMemo(
-    () => members.find((member) => member.id === editingId) ?? null,
-    [editingId, members],
-  );
-
-  const latestSuccessState = updateState.ok
-    ? updateState
-    : createState.ok
-      ? createState
-      : null;
-  const showSuccessModal = Boolean(
-    latestSuccessState &&
-      latestSuccessState.submittedAt > 0 &&
-      latestSuccessState.submittedAt !== dismissedAt,
-  );
-
-  useEffect(() => {
-    if (createState.ok) {
-      setCreateOpen(false);
-      router.refresh();
-    }
-  }, [createState.ok, router]);
-
-  useEffect(() => {
-    if (updateState.ok) {
-      setEditingId(null);
-      router.refresh();
-    }
-  }, [updateState.ok, router]);
-
   return (
     <>
       <section className="panel panel-highlight">
@@ -154,146 +29,20 @@ export function MembersManager({ members }: MembersManagerProps) {
           <h2 className="title-with-icon">
             <UsersRound size={18} /> 회원 및 주간 목표 관리
           </h2>
-          <Button type="button" className="inline-btn" onClick={() => setCreateOpen(true)}>
+          <Button
+            type="button"
+            className="inline-btn"
+            nativeButton={false}
+            render={<Link href="/members/new" />}
+          >
             <Plus size={16} /> 등록
           </Button>
         </div>
       </section>
 
       <section className="panel">
-        <MembersTable members={members} onSelectMember={setEditingId} />
+        <MembersTable members={members} />
       </section>
-
-      <Modal
-        open={createOpen}
-        title="회원 등록"
-        description="회원 정보와 주간 목표, 장기 목표를 함께 등록합니다."
-        onClose={() => setCreateOpen(false)}
-        size="lg"
-        showDefaultActions={false}
-      >
-        <form
-          key={createState.ok ? createState.submittedAt : 0}
-          action={createAction}
-          className="form-grid member-goal-inline"
-        >
-          <label>
-            이름
-            <input type="text" name="name" required />
-          </label>
-          <FormSelectField
-            label="성별"
-            name="gender"
-            placeholder="선택"
-            options={[
-              { value: "M", label: "남성" },
-              { value: "F", label: "여성" },
-            ]}
-          />
-          <FormSelectField
-            label="주간 목표 횟수"
-            name="target_sessions"
-            defaultValue="2"
-            options={[
-              { value: "1", label: "1" },
-              { value: "2", label: "2" },
-              { value: "3", label: "3" },
-              { value: "4", label: "4" },
-              { value: "5", label: "5" },
-            ]}
-          />
-          <label>
-            기본 운동 시간(분)
-            <input type="number" min={0} name="target_minutes" defaultValue={60} required />
-          </label>
-          <GoalFields />
-          {createState.message && !createState.ok ? (
-            <p className="error span-4">{createState.message}</p>
-          ) : null}
-          <Button type="submit" disabled={createPending}>
-            {createPending ? "등록 중..." : "등록"}
-          </Button>
-        </form>
-      </Modal>
-
-      <Modal
-        open={Boolean(editingMember)}
-        title="회원 정보 수정"
-        description="회원 기본 정보, 주간 목표, 장기 목표를 수정할 수 있습니다."
-        onClose={() => setEditingId(null)}
-        size="lg"
-        showDefaultActions={false}
-      >
-        {editingMember ? (
-          <form
-            key={`${editingMember.id}-${updateState.ok ? updateState.submittedAt : "edit"}`}
-            action={updateAction}
-            className="form-grid member-goal-inline"
-          >
-            <input type="hidden" name="member_id" value={editingMember.id} />
-            <label>
-              이름
-              <input type="text" name="name" required defaultValue={editingMember.name} />
-            </label>
-            <FormSelectField
-              label="성별"
-              name="gender"
-              defaultValue={editingMember.gender ?? undefined}
-              placeholder="선택"
-              options={[
-                { value: "M", label: "남성" },
-                { value: "F", label: "여성" },
-              ]}
-            />
-            <FormSelectField
-              label="주간 목표 횟수"
-              name="target_sessions"
-              defaultValue={String(editingMember.targetSessions)}
-              options={[
-                { value: "1", label: "1" },
-                { value: "2", label: "2" },
-                { value: "3", label: "3" },
-                { value: "4", label: "4" },
-                { value: "5", label: "5" },
-              ]}
-            />
-            <label>
-              기본 운동 시간(분)
-              <input
-                type="number"
-                min={0}
-                name="target_minutes"
-                defaultValue={editingMember.targetMinutes}
-                required
-              />
-            </label>
-            <GoalFields member={editingMember} />
-            {updateState.message && !updateState.ok ? (
-              <p className="error span-4">{updateState.message}</p>
-            ) : null}
-            <Button type="submit" disabled={updatePending}>
-              {updatePending ? "저장 중..." : "저장"}
-            </Button>
-          </form>
-        ) : null}
-      </Modal>
-
-      <Modal
-        open={showSuccessModal}
-        title="저장 완료"
-        description={latestSuccessState?.message ?? "작업이 완료되었습니다."}
-        onClose={() => setDismissedAt(latestSuccessState?.submittedAt ?? 0)}
-        showDefaultActions={false}
-      >
-        <div className="modal-actions">
-          <Button
-            type="button"
-            onClick={() => setDismissedAt(latestSuccessState?.submittedAt ?? 0)}
-          >
-            확인
-          </Button>
-        </div>
-      </Modal>
     </>
   );
 }
