@@ -1,4 +1,4 @@
-﻿"use server";
+"use server";
 
 import { revalidatePath } from "next/cache";
 
@@ -18,12 +18,43 @@ const initialMemberActionState: MemberActionState = {
 };
 
 function isMissingOverallGoalColumn(error: unknown) {
+  return isSupabaseErrorCode(error, "42703") || isSupabaseErrorCode(error, "PGRST204");
+}
+
+function isMissingWeeklyGoalConflictConstraint(error: unknown) {
+  return isSupabaseErrorCode(error, "42P10");
+}
+
+function isSupabaseErrorCode(error: unknown, code: string) {
   return (
     typeof error === "object" &&
     error !== null &&
     "code" in error &&
-    (error as { code?: string }).code === "42703"
+    (error as { code?: string }).code === code
   );
+}
+
+function throwSupabaseError(action: string, error: unknown): never {
+  if (error instanceof Error) {
+    throw error;
+  }
+
+  if (typeof error === "object" && error !== null) {
+    const supabaseError = error as {
+      code?: string;
+      details?: string | null;
+      hint?: string | null;
+      message?: string;
+    };
+    const code = supabaseError.code ? ` (${supabaseError.code})` : "";
+    const details = supabaseError.details ? ` ${supabaseError.details}` : "";
+    const hint = supabaseError.hint ? ` ${supabaseError.hint}` : "";
+    const message = supabaseError.message || "알 수 없는 데이터베이스 오류가 발생했습니다.";
+
+    throw new Error(`${action} 실패${code}: ${message}${details}${hint}`);
+  }
+
+  throw new Error(`${action} 실패: 알 수 없는 오류가 발생했습니다.`);
 }
 
 function parseOverallGoalAchieved(value: FormDataEntryValue | null) {
@@ -83,6 +114,67 @@ function memberFailure(message: string): MemberActionState {
   return { ok: false, message, submittedAt: Date.now() };
 }
 
+async function saveFixedWeeklyGoal(
+  supabase: ReturnType<typeof createSupabaseAdmin>,
+  memberId: string,
+  targetSessions: number,
+  targetMinutes: number,
+) {
+  const payload = {
+    member_id: memberId,
+    week_start: COMMUNITY_START_WEEK,
+    target_sessions: targetSessions,
+    target_minutes: targetMinutes,
+  };
+
+  const { error } = await supabase.from("weekly_goals").upsert(payload, {
+    onConflict: "member_id,week_start",
+  });
+
+  if (!error) {
+    return;
+  }
+
+  if (!isMissingWeeklyGoalConflictConstraint(error)) {
+    throwSupabaseError("주간 목표 저장", error);
+  }
+
+  const { data: existingGoal, error: lookupError } = await supabase
+    .from("weekly_goals")
+    .select("id")
+    .eq("member_id", memberId)
+    .eq("week_start", COMMUNITY_START_WEEK)
+    .limit(1)
+    .maybeSingle();
+
+  if (lookupError) {
+    throwSupabaseError("기존 주간 목표 조회", lookupError);
+  }
+
+  if (existingGoal) {
+    const { error: updateError } = await supabase
+      .from("weekly_goals")
+      .update({
+        target_sessions: targetSessions,
+        target_minutes: targetMinutes,
+      })
+      .eq("member_id", memberId)
+      .eq("week_start", COMMUNITY_START_WEEK);
+
+    if (updateError) {
+      throwSupabaseError("주간 목표 수정", updateError);
+    }
+
+    return;
+  }
+
+  const { error: insertError } = await supabase.from("weekly_goals").insert(payload);
+
+  if (insertError) {
+    throwSupabaseError("주간 목표 등록", insertError);
+  }
+}
+
 export async function createMember(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const gender = String(formData.get("gender") ?? "").trim();
@@ -105,7 +197,6 @@ export async function createMember(formData: FormData) {
     gender,
     overall_goal_title: overallGoalTitle || null,
     overall_goal_value: overallGoalValue || null,
-    overall_goal_note: null,
     overall_goal_achieved: overallGoalAchieved,
     ...settlementFields,
   };
@@ -114,7 +205,7 @@ export async function createMember(formData: FormData) {
 
   if (error) {
     if (!isMissingOverallGoalColumn(error)) {
-      throw error;
+      throwSupabaseError("회원 등록", error);
     }
 
     const { error: fallbackError } = await supabase.from("members").insert({
@@ -123,7 +214,7 @@ export async function createMember(formData: FormData) {
     });
 
     if (fallbackError) {
-      throw fallbackError;
+      throwSupabaseError("회원 기본 정보 등록", fallbackError);
     }
   }
 
@@ -164,7 +255,6 @@ export async function createMemberWithGoal(formData: FormData) {
     gender,
     overall_goal_title: overallGoalTitle || null,
     overall_goal_value: overallGoalValue || null,
-    overall_goal_note: null,
     overall_goal_achieved: overallGoalAchieved,
     ...settlementFields,
   };
@@ -177,7 +267,7 @@ export async function createMemberWithGoal(formData: FormData) {
 
   if (memberError) {
     if (!isMissingOverallGoalColumn(memberError)) {
-      throw memberError;
+      throwSupabaseError("회원 등록", memberError);
     }
 
     const { data: fallbackMember, error: fallbackMemberError } = await supabase
@@ -190,7 +280,7 @@ export async function createMemberWithGoal(formData: FormData) {
       .single();
 
     if (fallbackMemberError) {
-      throw fallbackMemberError;
+      throwSupabaseError("회원 기본 정보 등록", fallbackMemberError);
     }
 
     member = fallbackMember;
@@ -198,16 +288,7 @@ export async function createMemberWithGoal(formData: FormData) {
     member = insertedMember;
   }
 
-  const { error: goalError } = await supabase.from("weekly_goals").insert({
-    member_id: member.id,
-    week_start: COMMUNITY_START_WEEK,
-    target_sessions: targetSessions,
-    target_minutes: targetMinutes,
-  });
-
-  if (goalError) {
-    throw goalError;
-  }
+  await saveFixedWeeklyGoal(supabase, member.id, targetSessions, targetMinutes);
 
   revalidatePath("/members");
   revalidatePath("/");
@@ -224,21 +305,7 @@ export async function upsertWeeklyGoal(formData: FormData) {
 
   const supabase = createSupabaseAdmin();
 
-  const { error } = await supabase.from("weekly_goals").upsert(
-    {
-      member_id: memberId,
-      week_start: COMMUNITY_START_WEEK,
-      target_sessions: targetSessions,
-      target_minutes: targetMinutes,
-    },
-    {
-      onConflict: "member_id,week_start",
-    },
-  );
-
-  if (error) {
-    throw error;
-  }
+  await saveFixedWeeklyGoal(supabase, memberId, targetSessions, targetMinutes);
 
   revalidatePath("/members");
   revalidatePath("/");
@@ -284,7 +351,6 @@ export async function updateMemberWithGoal(formData: FormData) {
       gender,
       overall_goal_title: overallGoalTitle || null,
       overall_goal_value: overallGoalValue || null,
-      overall_goal_note: null,
       overall_goal_achieved: overallGoalAchieved,
       ...settlementFields,
     })
@@ -292,7 +358,7 @@ export async function updateMemberWithGoal(formData: FormData) {
 
   if (memberError) {
     if (!isMissingOverallGoalColumn(memberError)) {
-      throw memberError;
+      throwSupabaseError("회원 정보 수정", memberError);
     }
 
     const { error: fallbackMemberError } = await supabase
@@ -304,25 +370,11 @@ export async function updateMemberWithGoal(formData: FormData) {
       .eq("id", memberId);
 
     if (fallbackMemberError) {
-      throw fallbackMemberError;
+      throwSupabaseError("회원 기본 정보 수정", fallbackMemberError);
     }
   }
 
-  const { error: goalError } = await supabase.from("weekly_goals").upsert(
-    {
-      member_id: memberId,
-      week_start: COMMUNITY_START_WEEK,
-      target_sessions: targetSessions,
-      target_minutes: targetMinutes,
-    },
-    {
-      onConflict: "member_id,week_start",
-    },
-  );
-
-  if (goalError) {
-    throw goalError;
-  }
+  await saveFixedWeeklyGoal(supabase, memberId, targetSessions, targetMinutes);
 
   revalidatePath("/members");
   revalidatePath(`/members/${memberId}/edit`);
@@ -356,7 +408,3 @@ export async function updateMemberWithGoalAction(
     );
   }
 }
-
-
-
-

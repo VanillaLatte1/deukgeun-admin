@@ -6,6 +6,7 @@ export const FIRST_HALF_2026_PROOF_END = "2026-06-27";
 export const FIRST_HALF_2026_FINAL_DEADLINE = "2026-06-30";
 export const FIRST_HALF_2026_JUNE_PROOF_START = "2026-06-01";
 export const FIRST_HALF_2026_JUNE_PROOF_END = "2026-06-30";
+export const WEEKLY_SHORTFALL_FINE_AMOUNT = 10_000;
 
 export type Member = {
   id: string;
@@ -13,7 +14,6 @@ export type Member = {
   gender: string | null;
   overall_goal_title: string | null;
   overall_goal_value: string | null;
-  overall_goal_note: string | null;
   overall_goal_achieved: boolean | null;
   penalty_amount: number;
   june_goal_proof_achieved: boolean;
@@ -131,7 +131,7 @@ function getWeekRange(weekStart: string) {
 export async function listMembers() {
   const supabase = createSupabaseAdmin();
   const fullSelect =
-    "id, name, gender, overall_goal_title, overall_goal_value, overall_goal_note, overall_goal_achieved, penalty_amount, june_goal_proof_achieved, june_goal_proof_date, june_goal_proof_note, created_at";
+    "id, name, gender, overall_goal_title, overall_goal_value, overall_goal_achieved, penalty_amount, june_goal_proof_achieved, june_goal_proof_date, june_goal_proof_note, created_at";
   const { data, error } = await supabase
     .from("members")
     .select(fullSelect)
@@ -160,7 +160,6 @@ export async function listMembers() {
     Member,
     | "overall_goal_title"
     | "overall_goal_value"
-    | "overall_goal_note"
     | "overall_goal_achieved"
     | "penalty_amount"
     | "june_goal_proof_achieved"
@@ -171,7 +170,6 @@ export async function listMembers() {
       ...member,
       overall_goal_title: null,
       overall_goal_value: null,
-      overall_goal_note: null,
       overall_goal_achieved: null,
       penalty_amount: 100_000,
       june_goal_proof_achieved: false,
@@ -184,7 +182,7 @@ export async function listMembers() {
 export async function getMemberById(memberId: string) {
   const supabase = createSupabaseAdmin();
   const fullSelect =
-    "id, name, gender, overall_goal_title, overall_goal_value, overall_goal_note, overall_goal_achieved, penalty_amount, june_goal_proof_achieved, june_goal_proof_date, june_goal_proof_note, created_at";
+    "id, name, gender, overall_goal_title, overall_goal_value, overall_goal_achieved, penalty_amount, june_goal_proof_achieved, june_goal_proof_date, june_goal_proof_note, created_at";
   const { data, error } = await supabase
     .from("members")
     .select(fullSelect)
@@ -218,7 +216,6 @@ export async function getMemberById(memberId: string) {
       Member,
       | "overall_goal_title"
       | "overall_goal_value"
-      | "overall_goal_note"
       | "overall_goal_achieved"
       | "penalty_amount"
       | "june_goal_proof_achieved"
@@ -227,7 +224,6 @@ export async function getMemberById(memberId: string) {
     >),
     overall_goal_title: null,
     overall_goal_value: null,
-    overall_goal_note: null,
     overall_goal_achieved: null,
     penalty_amount: 100_000,
     june_goal_proof_achieved: false,
@@ -541,7 +537,7 @@ function getFinalFinePolicy(member: Member, year: number, half: HalfYearKey) {
       hasJuneGoalProof: Boolean(member.june_goal_proof_achieved),
       finalFineRate: 0,
       finalFineAmount: 0,
-      finalFineReason: "6월 30일까지 목표 달성 및 유지",
+      finalFineReason: "6월 30일까지 최종 목표 달성 및 확인",
     };
   }
 
@@ -551,7 +547,7 @@ function getFinalFinePolicy(member: Member, year: number, half: HalfYearKey) {
       hasJuneGoalProof: Boolean(member.june_goal_proof_achieved),
       finalFineRate: 0,
       finalFineAmount: 0,
-      finalFineReason: "최종 목표 판정 미설정",
+      finalFineReason: "최종 목표 달성 여부 미설정",
     };
   }
 
@@ -633,7 +629,7 @@ export async function getPenaltyDocumentData(
     const targetSessionsTotal = activeWeeks.length * weeklyTargetSessions;
     const completedSessionsTotal = doneTotalByMember.get(member.id) ?? 0;
     const finalGoalAchieved = member.overall_goal_achieved;
-    const weeklyFineAmount = shortfallWeeks * 20_000;
+    const weeklyFineAmount = shortfallWeeks * WEEKLY_SHORTFALL_FINE_AMOUNT;
     const finalFinePolicy = getFinalFinePolicy(member, year, half);
 
     return {

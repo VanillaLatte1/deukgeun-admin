@@ -1,7 +1,7 @@
 import { FileText, Landmark, Receipt, Target } from "lucide-react";
 
 import { PrintButton } from "@/components/print-button";
-import { getPenaltyDocumentData, type HalfYearKey } from "@/lib/data";
+import { getPenaltyDocumentData, WEEKLY_SHORTFALL_FINE_AMOUNT, type HalfYearKey } from "@/lib/data";
 
 type PenaltyDocumentsPageProps = {
   searchParams?: Promise<{
@@ -9,9 +9,10 @@ type PenaltyDocumentsPageProps = {
     half?: string | string[];
     weekStart?: string | string[];
     member?: string | string[];
-    account?: string | string[];
   }>;
 };
+
+const FIXED_DEPOSIT_ACCOUNT = "3333349503041 카카오뱅크(모임통장)";
 
 function formatCurrency(amount: number) {
   return `${amount.toLocaleString("ko-KR")}원`;
@@ -51,8 +52,7 @@ export default async function PenaltyDocumentsPage({
   const selectedYear = Number.isFinite(yearParam) ? yearParam : currentYear;
   const selectedHalf = toHalfYear(toSingleValue(resolvedSearchParams.half) ?? defaultHalf);
   const requestedWeekStart = toSingleValue(resolvedSearchParams.weekStart);
-  const selectedAccount =
-    (toSingleValue(resolvedSearchParams.account) ?? "").trim() || "입금 계좌를 입력해 주세요.";
+  const selectedAccount = FIXED_DEPOSIT_ACCOUNT;
 
   const { range, weekStarts, summaries } = await getPenaltyDocumentData(
     selectedYear,
@@ -137,8 +137,8 @@ export default async function PenaltyDocumentsPage({
             <input
               type="text"
               name="account"
-              defaultValue={selectedAccount === "입금 계좌를 입력해 주세요." ? "" : selectedAccount}
-              placeholder="예: 카카오뱅크 3333-12-3456789 홍길동"
+              value={selectedAccount}
+              readOnly
             />
           </label>
 
@@ -234,7 +234,7 @@ export default async function PenaltyDocumentsPage({
                       미달성 주차: {formatWeekStarts(selectedSummary.shortfallWeekStarts)}
                     </span>
                     <span className="penalty-table-note">
-                      주간 벌금 {formatCurrency(20_000)} x {selectedSummary.shortfallWeeks}주 ={" "}
+                      주간 벌금 {formatCurrency(WEEKLY_SHORTFALL_FINE_AMOUNT)} x {selectedSummary.shortfallWeeks}주 ={" "}
                       {formatCurrency(selectedSummary.weeklyFineAmount)}
                     </span>
                   </td>

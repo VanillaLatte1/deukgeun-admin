@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState } from "react";
 import Select from "react-select";
@@ -34,6 +34,8 @@ export function FormSelectField({
     <label>
       {label}
       <Select
+        instanceId={`form-select-${name}`}
+        inputId={`form-select-${name}-input`}
         classNamePrefix="form-select"
         options={options}
         value={selected}
