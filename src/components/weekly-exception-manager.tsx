@@ -57,8 +57,8 @@ export function WeeklyExceptionManager({
       <section className="panel admin-detail-panel">
         <form action={createAction} className="admin-detail-form">
           <div className="admin-form-notice">
-            <strong>{weekStart} 주차의 제외 대상을 여기서 관리합니다.</strong>
-            <span>해당 주차에서 진행 체크를 빼야 하는 회원만 선택해서 등록해 주세요.</span>
+            <strong>{weekStart} 주차의 제외 대상을 관리합니다.</strong>
+            <span>해당 주차에서 진행 체크를 빼야 하는 회원만 선택해서 등록하세요.</span>
           </div>
 
           <section className="admin-form-section">
@@ -67,7 +67,7 @@ export function WeeklyExceptionManager({
                 <h3>제외 대상 등록</h3>
                 <span className="admin-form-step">1</span>
               </div>
-              <p>회원과 사유를 입력하면 바로 해당 주차 제외 처리에 반영됩니다.</p>
+              <p>회원과 사유를 입력하면 해당 주차의 목표/벌금 계산에서 제외됩니다.</p>
             </div>
 
             <input type="hidden" name="week_start" value={weekStart} />

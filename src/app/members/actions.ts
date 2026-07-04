@@ -3,18 +3,13 @@
 import { revalidatePath } from "next/cache";
 
 import { COMMUNITY_START_WEEK } from "@/lib/data";
+import { getActiveSettlementPeriod } from "@/lib/settlement-period";
 import { createSupabaseAdmin } from "@/lib/supabase-server";
 
 export type MemberActionState = {
   ok: boolean;
   message: string;
   submittedAt: number;
-};
-
-const initialMemberActionState: MemberActionState = {
-  ok: false,
-  message: "",
-  submittedAt: 0,
 };
 
 function isMissingOverallGoalColumn(error: unknown) {
@@ -61,7 +56,7 @@ function parseOverallGoalAchieved(value: FormDataEntryValue | null) {
   const normalized = String(value ?? "").trim().toLowerCase();
   if (normalized === "true") return true;
   if (normalized === "false") return false;
-  return null;
+  return false;
 }
 
 function parseBoolean(value: FormDataEntryValue | null) {
@@ -88,14 +83,37 @@ function parseOptionalDate(value: FormDataEntryValue | null) {
   return date;
 }
 
-function getSettlementFields(formData: FormData) {
+function getSettlementFields(formData: FormData, overallGoalAchieved: boolean | null) {
   const penaltyAmount = parsePenaltyAmount(formData.get("penalty_amount"));
+  const shouldSaveJuneProof = overallGoalAchieved === false;
+  const settlementPeriod = getActiveSettlementPeriod();
+
+  if (!shouldSaveJuneProof) {
+    return {
+      penalty_amount: penaltyAmount,
+      june_goal_proof_achieved: false,
+      june_goal_proof_date: null,
+      june_goal_proof_note: null,
+    };
+  }
+
   const juneGoalProofAchieved = parseBoolean(formData.get("june_goal_proof_achieved"));
   const juneGoalProofDate = parseOptionalDate(formData.get("june_goal_proof_date"));
   const juneGoalProofNote = String(formData.get("june_goal_proof_note") ?? "").trim();
 
   if (juneGoalProofAchieved && !juneGoalProofDate) {
-    throw new Error("6월 목표 도달 증적이 있으면 증적 날짜를 입력하세요.");
+    throw new Error(`${settlementPeriod.proofMonthLabel} 운동 증적이 있으면 증적 날짜를 입력하세요.`);
+  }
+
+  if (
+    juneGoalProofAchieved &&
+    juneGoalProofDate &&
+    (juneGoalProofDate < settlementPeriod.proofStartsAt ||
+      juneGoalProofDate > settlementPeriod.proofEndsAt)
+  ) {
+    throw new Error(
+      `${settlementPeriod.proofMonthLabel} 운동 증적 날짜는 ${settlementPeriod.proofStartsAt} ~ ${settlementPeriod.proofEndsAt} 사이로 입력하세요.`,
+    );
   }
 
   return {
@@ -178,10 +196,8 @@ async function saveFixedWeeklyGoal(
 export async function createMember(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const gender = String(formData.get("gender") ?? "").trim();
-  const overallGoalTitle = String(formData.get("overall_goal_title") ?? "").trim();
-  const overallGoalValue = String(formData.get("overall_goal_value") ?? "").trim();
   const overallGoalAchieved = parseOverallGoalAchieved(formData.get("overall_goal_achieved"));
-  const settlementFields = getSettlementFields(formData);
+  const settlementFields = getSettlementFields(formData, overallGoalAchieved);
 
   if (!name) {
     throw new Error("회원 이름은 필수입니다.");
@@ -195,8 +211,8 @@ export async function createMember(formData: FormData) {
   const payload = {
     name,
     gender,
-    overall_goal_title: overallGoalTitle || null,
-    overall_goal_value: overallGoalValue || null,
+    overall_goal_title: null,
+    overall_goal_value: null,
     overall_goal_achieved: overallGoalAchieved,
     ...settlementFields,
   };
@@ -227,10 +243,8 @@ export async function createMemberWithGoal(formData: FormData) {
   const gender = String(formData.get("gender") ?? "").trim();
   const targetSessions = Number(formData.get("target_sessions") ?? 0);
   const targetMinutes = Number(formData.get("target_minutes") ?? 0);
-  const overallGoalTitle = String(formData.get("overall_goal_title") ?? "").trim();
-  const overallGoalValue = String(formData.get("overall_goal_value") ?? "").trim();
   const overallGoalAchieved = parseOverallGoalAchieved(formData.get("overall_goal_achieved"));
-  const settlementFields = getSettlementFields(formData);
+  const settlementFields = getSettlementFields(formData, overallGoalAchieved);
 
   if (!name) {
     throw new Error("회원 이름은 필수입니다.");
@@ -253,8 +267,8 @@ export async function createMemberWithGoal(formData: FormData) {
   const memberInsertPayload = {
     name,
     gender,
-    overall_goal_title: overallGoalTitle || null,
-    overall_goal_value: overallGoalValue || null,
+    overall_goal_title: null,
+    overall_goal_value: null,
     overall_goal_achieved: overallGoalAchieved,
     ...settlementFields,
   };
@@ -317,10 +331,8 @@ export async function updateMemberWithGoal(formData: FormData) {
   const gender = String(formData.get("gender") ?? "").trim();
   const targetSessions = Number(formData.get("target_sessions") ?? 0);
   const targetMinutes = Number(formData.get("target_minutes") ?? 0);
-  const overallGoalTitle = String(formData.get("overall_goal_title") ?? "").trim();
-  const overallGoalValue = String(formData.get("overall_goal_value") ?? "").trim();
   const overallGoalAchieved = parseOverallGoalAchieved(formData.get("overall_goal_achieved"));
-  const settlementFields = getSettlementFields(formData);
+  const settlementFields = getSettlementFields(formData, overallGoalAchieved);
 
   if (!memberId) {
     throw new Error("수정할 회원 정보가 없습니다.");
@@ -349,8 +361,6 @@ export async function updateMemberWithGoal(formData: FormData) {
     .update({
       name,
       gender,
-      overall_goal_title: overallGoalTitle || null,
-      overall_goal_value: overallGoalValue || null,
       overall_goal_achieved: overallGoalAchieved,
       ...settlementFields,
     })
@@ -379,10 +389,11 @@ export async function updateMemberWithGoal(formData: FormData) {
   revalidatePath("/members");
   revalidatePath(`/members/${memberId}/edit`);
   revalidatePath("/");
+  revalidatePath("/penalty-documents");
 }
 
 export async function createMemberWithGoalAction(
-  _prevState: MemberActionState = initialMemberActionState,
+  _prevState: MemberActionState,
   formData: FormData,
 ): Promise<MemberActionState> {
   try {
@@ -396,7 +407,7 @@ export async function createMemberWithGoalAction(
 }
 
 export async function updateMemberWithGoalAction(
-  _prevState: MemberActionState = initialMemberActionState,
+  _prevState: MemberActionState,
   formData: FormData,
 ): Promise<MemberActionState> {
   try {

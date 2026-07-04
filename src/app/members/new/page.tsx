@@ -1,16 +1,18 @@
 import Link from "next/link";
 import { ArrowLeft, UserPlus } from "lucide-react";
 
-import { createMemberWithGoal } from "@/app/members/actions";
+import { createMemberWithGoalAction } from "@/app/members/actions";
 import { MemberDetailForm } from "@/components/member-detail-form";
 import { SupabaseRequiredPanel } from "@/components/supabase-required-panel";
 import { Button } from "@/components/ui/button";
+import { getActiveSettlementPeriod } from "@/lib/settlement-period";
 import { isSupabaseReady } from "@/lib/supabase-server";
 
 export default async function NewMemberPage() {
   if (!isSupabaseReady()) {
     return <SupabaseRequiredPanel showEnvGuide={false} />;
   }
+  const settlementPeriod = getActiveSettlementPeriod();
 
   return (
     <div className="page-stack">
@@ -36,7 +38,11 @@ export default async function NewMemberPage() {
       </section>
 
       <section className="panel member-detail-panel">
-        <MemberDetailForm action={createMemberWithGoal} submitLabel="회원 추가" />
+        <MemberDetailForm
+          action={createMemberWithGoalAction}
+          submitLabel="회원 추가"
+          settlementPeriod={settlementPeriod}
+        />
       </section>
     </div>
   );

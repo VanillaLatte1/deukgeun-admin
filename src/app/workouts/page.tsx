@@ -34,7 +34,7 @@ export default async function WorkoutsPage() {
               <ClipboardCheck size={18} /> 운동 인증 등록
             </h2>
             <p className="member-page-subcopy">
-              회원 선택부터 인증 이미지 업로드까지 한 흐름으로 정리한 등록 화면입니다.
+              회원 선택부터 인증 이미지 업로드까지 한 화면에서 등록합니다. 회차 정정이 필요하면 관리자 보정 모드를 사용하세요.
             </p>
           </div>
         </div>

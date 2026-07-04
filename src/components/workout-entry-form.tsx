@@ -58,6 +58,7 @@ export function WorkoutEntryForm({
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [selectedWorkoutDate, setSelectedWorkoutDate] = useState(defaultWorkoutDate);
   const [selectedSessionNo, setSelectedSessionNo] = useState("1");
+  const [sessionMode, setSessionMode] = useState<"auto" | "manual">("auto");
   const [exerciseType, setExerciseType] = useState(WORKOUT_TYPE_GENERAL);
   const [durationMinutes, setDurationMinutes] = useState(
     getWorkoutPolicy(WORKOUT_TYPE_GENERAL).defaultDurationMinutes,
@@ -103,8 +104,17 @@ export function WorkoutEntryForm({
   );
 
   const effectiveSessionNo =
-    selectedSessionNo && !takenSessions.has(selectedSessionNo) ? selectedSessionNo : availableSession;
+    sessionMode === "manual"
+      ? selectedSessionNo
+      : selectedSessionNo && !takenSessions.has(selectedSessionNo)
+        ? selectedSessionNo
+        : availableSession;
   const isExcusedMember = excusedMemberIds.includes(selectedMemberId);
+  const hasAutoSession = Boolean(availableSession);
+  const takenSessionText =
+    takenSessions.size > 0
+      ? [...takenSessions].sort((a, b) => Number(a) - Number(b)).map((value) => `${value}회차`).join(", ")
+      : "등록된 회차 없음";
   const showSuccessModal =
     state.ok && state.submittedAt > 0 && state.submittedAt !== dismissedAt;
   const formKey = state.ok ? state.submittedAt : dismissedAt;
@@ -125,6 +135,7 @@ export function WorkoutEntryForm({
     setSelectedMemberId("");
     setSelectedWorkoutDate(defaultWorkoutDate);
     setSelectedSessionNo("1");
+    setSessionMode("auto");
     setExerciseType(WORKOUT_TYPE_GENERAL);
     setDurationMinutes(getWorkoutPolicy(WORKOUT_TYPE_GENERAL).defaultDurationMinutes);
   };
@@ -135,10 +146,10 @@ export function WorkoutEntryForm({
         <input type="hidden" name="session_no" value={effectiveSessionNo} />
 
         <div className="admin-form-notice">
-          <strong>운동 인증 등록 전 필수 항목을 확인해 주세요.</strong>
+          <strong>운동 인증 등록 전에 회원, 날짜, 회차를 확인해 주세요.</strong>
           <span>
-            일반 운동은 시작 사진과 종료 사진이 모두 필요하고, 러닝은 인증 사진 1장만 등록하면
-            됩니다.
+            일반 운동은 시작/종료 사진이 필요하고, 러닝은 인증 사진 1장만 등록하면 됩니다.
+            날짜나 회차를 정정해야 할 때는 관리자 보정 모드를 켜세요.
           </span>
         </div>
 
@@ -148,7 +159,7 @@ export function WorkoutEntryForm({
               <h3>회원 및 운동 정보</h3>
               <span className="admin-form-step">1</span>
             </div>
-            <p>회원, 날짜, 운동 종류, 기본 시간을 먼저 설정합니다.</p>
+            <p>회원, 날짜, 운동 종류, 운동 시간을 먼저 설정합니다.</p>
           </div>
 
           <div className="admin-form-grid admin-form-grid-workout-basic">
@@ -168,19 +179,6 @@ export function WorkoutEntryForm({
                 required
                 value={selectedWorkoutDate}
                 onChange={(event) => setSelectedWorkoutDate(event.target.value)}
-              />
-            </label>
-
-            <label>
-              회차
-              <input
-                type="text"
-                value={
-                  effectiveSessionNo
-                    ? `${effectiveSessionNo}회차 자동 배정`
-                    : "배정 가능한 회차 없음"
-                }
-                readOnly
               />
             </label>
 
@@ -207,16 +205,53 @@ export function WorkoutEntryForm({
                 required
               />
             </label>
+
+            <label>
+              회차 입력 방식
+              <select
+                value={sessionMode}
+                onChange={(event) => setSessionMode(event.target.value === "manual" ? "manual" : "auto")}
+              >
+                <option value="auto">자동 추천</option>
+                <option value="manual">관리자 보정</option>
+              </select>
+            </label>
           </div>
 
-          {isExcusedMember ? (
+          <div className="admin-session-panel">
+            <div>
+              <strong>등록된 회차</strong>
+              <span>{takenSessionText}</span>
+            </div>
+            <div>
+              <strong>{sessionMode === "manual" ? "보정 회차" : "추천 회차"}</strong>
+              {sessionMode === "manual" ? (
+                <select value={selectedSessionNo} onChange={(event) => setSelectedSessionNo(event.target.value)}>
+                  {sessionOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.value}회차{option.disabled ? " - 이미 등록됨" : ""}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span>{effectiveSessionNo ? `${effectiveSessionNo}회차` : "배정 가능한 회차 없음"}</span>
+              )}
+            </div>
+          </div>
+
+          {sessionMode === "manual" && takenSessions.has(selectedSessionNo) ? (
             <p className="error">
-              이 회원은 이번 주 제외 처리 상태입니다. 기록은 남길 수 있지만 진행률 집계에서는
-              제외됩니다.
+              선택한 회차는 이미 등록되어 있습니다. 저장 시 서버에서 중복을 막습니다.
             </p>
           ) : null}
 
-          {selectedMemberId && !availableSession ? (
+          {isExcusedMember ? (
+            <p className="error">
+              이 회원은 이번 주 제외 처리 상태입니다. 기록은 저장할 수 있지만 진행 집계에서는 제외됩니다.
+            </p>
+          ) : null}
+
+          {selectedMemberId && !hasAutoSession && sessionMode === "auto" ? (
             <p className="error">선택한 회원은 이번 주 1~5회차 인증이 모두 등록되어 있습니다.</p>
           ) : null}
         </section>
@@ -258,13 +293,13 @@ export function WorkoutEntryForm({
               <h3>추가 메모</h3>
               <span className="admin-form-step">3</span>
             </div>
-            <p>특이사항이 있을 때만 간단히 남겨 주세요.</p>
+            <p>정정 사유나 확인 근거가 있으면 간단히 남겨 주세요.</p>
           </div>
 
           <div className="admin-form-grid">
             <label className="admin-form-full">
               메모(선택)
-              <textarea name="notes" rows={4} placeholder="예: 기기 화면 흐림, 수동 확인 필요" />
+              <textarea name="notes" rows={4} placeholder="예: 카톡 인증 기준 수기 보정" />
             </label>
           </div>
         </section>
@@ -272,7 +307,7 @@ export function WorkoutEntryForm({
         {!state.ok && state.message ? <p className="error">{state.message}</p> : null}
 
         <div className="admin-form-actions">
-          <Button type="submit" size="lg" disabled={isPending || !availableSession}>
+          <Button type="submit" size="lg" disabled={isPending || (!effectiveSessionNo && sessionMode === "auto")}>
             {isPending ? "등록 중..." : "인증 등록"}
           </Button>
         </div>

@@ -13,6 +13,7 @@ type FormSelectFieldProps = {
   placeholder?: string;
   isSearchable?: boolean;
   isClearable?: boolean;
+  onValueChange?: (value: string) => void;
 };
 
 export function FormSelectField({
@@ -23,6 +24,7 @@ export function FormSelectField({
   placeholder = "선택",
   isSearchable = false,
   isClearable = false,
+  onValueChange,
 }: FormSelectFieldProps) {
   const defaultOption = useMemo(
     () => options.find((option) => option.value === defaultValue) ?? null,
@@ -39,7 +41,10 @@ export function FormSelectField({
         classNamePrefix="form-select"
         options={options}
         value={selected}
-        onChange={(option) => setSelected(option)}
+        onChange={(option) => {
+          setSelected(option);
+          onValueChange?.(option?.value ?? "");
+        }}
         placeholder={placeholder}
         noOptionsMessage={() => "검색 결과 없음"}
         isSearchable={isSearchable}

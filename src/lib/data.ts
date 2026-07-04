@@ -1,11 +1,15 @@
 import { createSupabaseAdmin } from "@/lib/supabase-server";
+import {
+  formatKoreanMonthDay,
+  getSettlementPeriod,
+  type HalfYearKey,
+  type SettlementPeriod,
+} from "@/lib/settlement-period";
 import { toWorkoutType, type WorkoutType } from "@/lib/workout-policy";
 
+export type { HalfYearKey } from "@/lib/settlement-period";
+
 export const COMMUNITY_START_WEEK = "2026-02-01";
-export const FIRST_HALF_2026_PROOF_END = "2026-06-27";
-export const FIRST_HALF_2026_FINAL_DEADLINE = "2026-06-30";
-export const FIRST_HALF_2026_JUNE_PROOF_START = "2026-06-01";
-export const FIRST_HALF_2026_JUNE_PROOF_END = "2026-06-30";
 export const WEEKLY_SHORTFALL_FINE_AMOUNT = 10_000;
 
 export type Member = {
@@ -65,12 +69,11 @@ export type WorkoutSession = Omit<WorkoutSessionRow, "members" | "exercise_type"
 
 export type WorkoutSessionSlot = Pick<WorkoutSessionRow, "member_id" | "workout_date" | "session_no">;
 
-export type HalfYearKey = "1" | "2";
-
 export type HalfYearRange = {
   year: number;
   half: HalfYearKey;
   label: string;
+  settlementPeriod: SettlementPeriod;
   from: string;
   to: string;
   selectedWeekStart: string;
@@ -170,7 +173,7 @@ export async function listMembers() {
       ...member,
       overall_goal_title: null,
       overall_goal_value: null,
-      overall_goal_achieved: null,
+      overall_goal_achieved: false,
       penalty_amount: 100_000,
       june_goal_proof_achieved: false,
       june_goal_proof_date: null,
@@ -224,7 +227,7 @@ export async function getMemberById(memberId: string) {
     >),
     overall_goal_title: null,
     overall_goal_value: null,
-    overall_goal_achieved: null,
+    overall_goal_achieved: false,
     penalty_amount: 100_000,
     june_goal_proof_achieved: false,
     june_goal_proof_date: null,
@@ -493,14 +496,12 @@ export function getHalfYearRange(
   half: HalfYearKey,
   requestedWeekStart?: string,
 ): HalfYearRange {
-  const halfStart = half === "1" ? `${year}-01-01` : `${year}-07-01`;
-  const from = COMMUNITY_START_WEEK > halfStart ? COMMUNITY_START_WEEK : halfStart;
-  const maxTo =
-    year === 2026 && half === "1"
-      ? FIRST_HALF_2026_PROOF_END
-      : half === "1"
-        ? `${year}-06-30`
-        : `${year}-12-31`;
+  const settlementPeriod = getSettlementPeriod(year, half);
+  const from =
+    COMMUNITY_START_WEEK > settlementPeriod.startsAt
+      ? COMMUNITY_START_WEEK
+      : settlementPeriod.startsAt;
+  const maxTo = settlementPeriod.workoutProofEndsAt;
   const today = toYmd(new Date());
   const effectiveMaxTo = clampDateYmd(today, from, maxTo);
   const availableWeekStarts = getWeekStartsWithinDates(from, effectiveMaxTo);
@@ -511,11 +512,11 @@ export function getHalfYearRange(
       ? requestedWeekStart
       : defaultWeekStart;
   const selectedWeekEnd = clampDateYmd(addDaysToYmd(selectedWeekStart, 6), from, maxTo);
-  const label = `${year}년 ${half === "1" ? "상반기" : "하반기"}`;
   return {
     year,
     half,
-    label,
+    label: settlementPeriod.label,
+    settlementPeriod,
     from,
     to: selectedWeekEnd,
     selectedWeekStart,
@@ -528,7 +529,7 @@ function isWithinYmd(value: string | null, from: string, toInclusive: string) {
   return Boolean(value && value >= from && value <= toInclusive);
 }
 
-function getFinalFinePolicy(member: Member, year: number, half: HalfYearKey) {
+function getFinalFinePolicy(member: Member, settlementPeriod: SettlementPeriod) {
   const penaltyAmount = member.penalty_amount ?? 100_000;
 
   if (member.overall_goal_achieved === true) {
@@ -537,30 +538,17 @@ function getFinalFinePolicy(member: Member, year: number, half: HalfYearKey) {
       hasJuneGoalProof: Boolean(member.june_goal_proof_achieved),
       finalFineRate: 0,
       finalFineAmount: 0,
-      finalFineReason: "6월 30일까지 최종 목표 달성 및 확인",
-    };
-  }
-
-  if (member.overall_goal_achieved === null) {
-    return {
-      penaltyAmount,
-      hasJuneGoalProof: Boolean(member.june_goal_proof_achieved),
-      finalFineRate: 0,
-      finalFineAmount: 0,
-      finalFineReason: "최종 목표 달성 여부 미설정",
+      finalFineReason: `${formatKoreanMonthDay(settlementPeriod.finalDeadline)}까지 최종 목표 달성 및 확인`,
     };
   }
 
   const hasJuneGoalProof =
-    half === "1" &&
     member.june_goal_proof_achieved &&
-    (year === 2026
-      ? isWithinYmd(
-          member.june_goal_proof_date,
-          FIRST_HALF_2026_JUNE_PROOF_START,
-          FIRST_HALF_2026_JUNE_PROOF_END,
-        )
-      : isWithinYmd(member.june_goal_proof_date, `${year}-06-01`, `${year}-06-30`));
+    isWithinYmd(
+      member.june_goal_proof_date,
+      settlementPeriod.proofStartsAt,
+      settlementPeriod.proofEndsAt,
+    );
 
   if (hasJuneGoalProof) {
     return {
@@ -568,7 +556,7 @@ function getFinalFinePolicy(member: Member, year: number, half: HalfYearKey) {
       hasJuneGoalProof,
       finalFineRate: 0.5,
       finalFineAmount: Math.round(penaltyAmount * 0.5),
-      finalFineReason: "6월 중 목표 도달 증적 확인",
+      finalFineReason: `${settlementPeriod.proofMonthLabel} 중 운동 증적 확인`,
     };
   }
 
@@ -577,7 +565,7 @@ function getFinalFinePolicy(member: Member, year: number, half: HalfYearKey) {
     hasJuneGoalProof,
     finalFineRate: 1,
     finalFineAmount: penaltyAmount,
-    finalFineReason: "최종 목표 미달성 또는 6월 목표 도달 증적 없음",
+    finalFineReason: `최종 목표 미달성 또는 ${settlementPeriod.proofMonthLabel} 운동 증적 없음`,
   };
 }
 
@@ -630,7 +618,7 @@ export async function getPenaltyDocumentData(
     const completedSessionsTotal = doneTotalByMember.get(member.id) ?? 0;
     const finalGoalAchieved = member.overall_goal_achieved;
     const weeklyFineAmount = shortfallWeeks * WEEKLY_SHORTFALL_FINE_AMOUNT;
-    const finalFinePolicy = getFinalFinePolicy(member, year, half);
+    const finalFinePolicy = getFinalFinePolicy(member, range.settlementPeriod);
 
     return {
       member,

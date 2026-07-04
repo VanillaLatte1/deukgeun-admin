@@ -10,7 +10,7 @@ type MemberRow = {
   id: string;
   name: string;
   genderLabel: string;
-  overallGoalLabel: string;
+  finalGoalStatusLabel: string;
   settlementLabel: string;
   targetSessionsLabel: string;
   targetMinutesLabel: string;
@@ -19,9 +19,10 @@ type MemberRow = {
 
 type MembersManagerProps = {
   members: MemberRow[];
+  settlementPeriodLabel: string;
 };
 
-export function MembersManager({ members }: MembersManagerProps) {
+export function MembersManager({ members, settlementPeriodLabel }: MembersManagerProps) {
   return (
     <>
       <section className="panel panel-highlight">
@@ -41,7 +42,7 @@ export function MembersManager({ members }: MembersManagerProps) {
       </section>
 
       <section className="panel">
-        <MembersTable members={members} />
+        <MembersTable members={members} settlementPeriodLabel={settlementPeriodLabel} />
       </section>
     </>
   );

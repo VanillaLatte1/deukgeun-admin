@@ -2,11 +2,12 @@ import Link from "next/link";
 import { ArrowLeft, PencilLine } from "lucide-react";
 import { notFound } from "next/navigation";
 
-import { updateMemberWithGoal } from "@/app/members/actions";
+import { updateMemberWithGoalAction } from "@/app/members/actions";
 import { MemberDetailForm } from "@/components/member-detail-form";
 import { SupabaseRequiredPanel } from "@/components/supabase-required-panel";
 import { Button } from "@/components/ui/button";
 import { getFixedGoalByMemberId, getMemberById } from "@/lib/data";
+import { getActiveSettlementPeriod } from "@/lib/settlement-period";
 import { isSupabaseReady } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,7 @@ export default async function EditMemberPage({ params }: EditMemberPageProps) {
   }
 
   const { id } = await params;
+  const settlementPeriod = getActiveSettlementPeriod();
   const [member, goal] = await Promise.all([getMemberById(id), getFixedGoalByMemberId(id)]);
 
   if (!member) {
@@ -38,7 +40,7 @@ export default async function EditMemberPage({ params }: EditMemberPageProps) {
               <PencilLine size={18} /> 회원 정보 수정
             </h2>
             <p className="member-page-subcopy">
-              {member.name} 회원의 목표 구조를 보기 좋게 정리해서 수정할 수 있습니다.
+              {member.name} 회원의 목표 구조와 정산 정보를 보기 좋게 정리해서 수정합니다.
             </p>
           </div>
           <Button
@@ -54,8 +56,9 @@ export default async function EditMemberPage({ params }: EditMemberPageProps) {
 
       <section className="panel member-detail-panel">
         <MemberDetailForm
-          action={updateMemberWithGoal}
+          action={updateMemberWithGoalAction}
           submitLabel="수정 저장"
+          settlementPeriod={settlementPeriod}
           member={member}
           goal={goal}
         />

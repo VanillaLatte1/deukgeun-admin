@@ -3,6 +3,7 @@ import { CalendarX2 } from "lucide-react";
 
 import { WeeklyExceptionManager } from "@/components/weekly-exception-manager";
 import { SupabaseRequiredPanel } from "@/components/supabase-required-panel";
+import { Button } from "@/components/ui/button";
 import {
   COMMUNITY_START_WEEK,
   getCurrentWeekStart,
@@ -45,6 +46,13 @@ function getWeekStartsFromCommunityToCurrent() {
   return weeks;
 }
 
+function getWeekNumber(weekStart: string) {
+  const start = parseYmd(COMMUNITY_START_WEEK);
+  const current = parseYmd(weekStart);
+  const diffMs = current.getTime() - start.getTime();
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24 * 7)) + 1;
+}
+
 export default async function WeeklyExceptionsPage({ searchParams }: WeeklyExceptionsPageProps) {
   if (!isSupabaseReady()) {
     return <SupabaseRequiredPanel showEnvGuide={false} />;
@@ -64,6 +72,7 @@ export default async function WeeklyExceptionsPage({ searchParams }: WeeklyExcep
     listMembers(),
     listWeeklyExceptions(selectedWeek),
   ]);
+  const recentWeeks = [...weekStarts].reverse().slice(0, 8);
 
   return (
     <div className="page-stack">
@@ -74,8 +83,7 @@ export default async function WeeklyExceptionsPage({ searchParams }: WeeklyExcep
               <CalendarX2 size={18} /> 주간 제외 관리
             </h2>
             <p className="member-page-subcopy">
-              특정 주차에서 진행 체크를 제외할 회원을 선택하고, 이미 등록된 대상도 바로 해제할 수
-              있습니다.
+              특정 주차에서 목표/벌금 계산을 제외할 회원을 등록하고, 필요할 때 바로 해제합니다.
             </p>
           </div>
         </div>
@@ -88,11 +96,29 @@ export default async function WeeklyExceptionsPage({ searchParams }: WeeklyExcep
               <h3>주차 선택</h3>
               <span className="admin-form-step">0</span>
             </div>
-            <p>제외 처리를 적용할 기준 주차를 먼저 선택해 주세요.</p>
+            <p>제외 처리를 적용할 기준 주차를 먼저 선택하세요.</p>
           </div>
 
-          <div className="week-chip-list dashboard-week-chip-list">
-            {[...weekStarts].reverse().map((weekStart) => (
+          <form method="get" className="admin-form-grid admin-form-grid-filter records-filter-compact">
+            <label>
+              기준 주차
+              <select name="week" defaultValue={selectedWeek}>
+                {[...weekStarts].reverse().map((weekStart) => (
+                  <option key={weekStart} value={weekStart}>
+                    {weekStart} ({getWeekNumber(weekStart)}주차)
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="admin-form-actions admin-form-actions-inline">
+              <Button type="submit" className="inline-btn form-action-button">
+                주차 변경
+              </Button>
+            </div>
+          </form>
+
+          <div className="week-chip-list compact-week-chip-list">
+            {recentWeeks.map((weekStart) => (
               <Link
                 key={weekStart}
                 href={`/weekly-exceptions?week=${weekStart}`}

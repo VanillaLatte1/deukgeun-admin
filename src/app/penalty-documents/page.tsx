@@ -1,7 +1,8 @@
 import { FileText, Landmark, Receipt, Target } from "lucide-react";
 
-import { PrintButton } from "@/components/print-button";
-import { getPenaltyDocumentData, WEEKLY_SHORTFALL_FINE_AMOUNT, type HalfYearKey } from "@/lib/data";
+import { PenaltyDocumentFilterForm } from "@/components/penalty-document-filter-form";
+import { getPenaltyDocumentData, WEEKLY_SHORTFALL_FINE_AMOUNT } from "@/lib/data";
+import { getActiveSettlementPeriod, type HalfYearKey } from "@/lib/settlement-period";
 
 type PenaltyDocumentsPageProps = {
   searchParams?: Promise<{
@@ -12,7 +13,7 @@ type PenaltyDocumentsPageProps = {
   }>;
 };
 
-const FIXED_DEPOSIT_ACCOUNT = "3333349503041 카카오뱅크(모임통장)";
+const FIXED_DEPOSIT_ACCOUNT = "3333349503041 카카오뱅크 모임통장";
 
 function formatCurrency(amount: number) {
   return `${amount.toLocaleString("ko-KR")}원`;
@@ -45,10 +46,11 @@ export default async function PenaltyDocumentsPage({
 }: PenaltyDocumentsPageProps) {
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
-  const defaultHalf: HalfYearKey = currentDate.getMonth() + 1 >= 7 ? "2" : "1";
+  const activeSettlementPeriod = getActiveSettlementPeriod();
+  const defaultHalf: HalfYearKey = activeSettlementPeriod.half;
   const resolvedSearchParams = (await searchParams) ?? {};
 
-  const yearParam = Number(toSingleValue(resolvedSearchParams.year) ?? currentYear);
+  const yearParam = Number(toSingleValue(resolvedSearchParams.year) ?? activeSettlementPeriod.year);
   const selectedYear = Number.isFinite(yearParam) ? yearParam : currentYear;
   const selectedHalf = toHalfYear(toSingleValue(resolvedSearchParams.half) ?? defaultHalf);
   const requestedWeekStart = toSingleValue(resolvedSearchParams.weekStart);
@@ -73,8 +75,7 @@ export default async function PenaltyDocumentsPage({
           <span className="dashboard-panel-kicker">Penalty Documents</span>
           <h2>벌금 문서 출력</h2>
           <p className="weekly-exceptions-subcopy">
-            반기를 고른 뒤 기준 주차를 선택하면, 해당 주차까지의 누적 결과로 벌금 문서를
-            만들 수 있습니다.
+            반기와 기준 주차를 선택하면 해당 주차까지의 누적 결과로 벌금 고지서를 만들 수 있습니다.
           </p>
         </div>
       </section>
@@ -84,71 +85,24 @@ export default async function PenaltyDocumentsPage({
           <div>
             <h3>문서 설정</h3>
             <p className="weekly-exceptions-subcopy">
-              기준 주차와 회원, 입금 계좌를 설정하면 공문 형식의 벌금 고지서를 출력할 수
-              있습니다.
+              기준 주차와 회원을 설정하면 공문 형식의 벌금 고지서를 출력할 수 있습니다.
             </p>
           </div>
         </div>
 
-        <form method="get" className="form-grid penalty-filter-form">
-          <label>
-            기준 연도
-            <select name="year" defaultValue={String(selectedYear)}>
-              {years.map((year) => (
-                <option key={year} value={year}>
-                  {year}년
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            반기
-            <select name="half" defaultValue={selectedHalf}>
-              <option value="1">상반기</option>
-              <option value="2">하반기</option>
-            </select>
-          </label>
-
-          <label>
-            기준 주차
-            <select name="weekStart" defaultValue={range.selectedWeekStart}>
-              {weekStarts.map((weekStart) => (
-                <option key={weekStart} value={weekStart}>
-                  {weekStart}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            회원
-            <select name="member" defaultValue={selectedSummary?.member.id ?? ""}>
-              {summaries.map((summary) => (
-                <option key={summary.member.id} value={summary.member.id}>
-                  {summary.member.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="span-3 penalty-account-field">
-            입금 계좌
-            <input
-              type="text"
-              name="account"
-              value={selectedAccount}
-              readOnly
-            />
-          </label>
-
-          <div className="penalty-filter-actions">
-            <button type="submit" className="primary-action-btn">
-              문서 조회
-            </button>
-            <PrintButton />
-          </div>
-        </form>
+        <PenaltyDocumentFilterForm
+          years={years}
+          selectedYear={selectedYear}
+          selectedHalf={selectedHalf}
+          weekStarts={weekStarts}
+          selectedWeekStart={range.selectedWeekStart}
+          members={summaries.map((summary) => ({
+            id: summary.member.id,
+            name: summary.member.name,
+          }))}
+          selectedMemberId={selectedSummary?.member.id ?? ""}
+          selectedAccount={selectedAccount}
+        />
       </section>
 
       {selectedSummary ? (
@@ -165,8 +119,7 @@ export default async function PenaltyDocumentsPage({
               </div>
               <h1>{selectedSummary.member.name} 회원 벌금 정산 문서</h1>
               <p>
-                {range.label} 기준 {range.selectedWeekStart} 주차까지의 운동 인증 결과를 기준으로
-                작성한 벌금 내역입니다.
+                {range.label} 기준 {range.selectedWeekStart} 주차까지의 운동 인증 결과를 기준으로 작성한 벌금 내역입니다.
               </p>
             </header>
 
@@ -246,11 +199,7 @@ export default async function PenaltyDocumentsPage({
                 <tr>
                   <th>최종 목표 달성 여부</th>
                   <td>
-                    {selectedSummary.finalGoalAchieved === null
-                      ? "목표 미설정"
-                      : selectedSummary.finalGoalAchieved
-                        ? "달성"
-                        : "미달성"}
+                    {selectedSummary.finalGoalAchieved ? "달성" : "미달성"}
                     <span className="penalty-table-note">
                       본인 설정 벌금 {formatCurrency(selectedSummary.penaltyAmount)} x{" "}
                       {formatRate(selectedSummary.finalFineRate)} ={" "}
@@ -261,7 +210,8 @@ export default async function PenaltyDocumentsPage({
                     </span>
                     {selectedSummary.hasJuneGoalProof ? (
                       <span className="penalty-table-note">
-                        6월 목표 도달 증적일: {selectedSummary.juneGoalProofDate ?? "날짜 미기재"}
+                        {range.settlementPeriod.proofMonthLabel} 운동 증적일:{" "}
+                        {selectedSummary.juneGoalProofDate ?? "날짜 미기입"}
                       </span>
                     ) : null}
                   </td>
@@ -274,7 +224,7 @@ export default async function PenaltyDocumentsPage({
             </table>
 
             <p className="penalty-notice-line">
-              득근둑근 운영지침 및 내부 기준에 따라 반기 벌금을 고지합니다.
+              득근둑근 운영 지침 및 모임 기준에 따라 반기 벌금을 고지합니다.
             </p>
 
             <section className="penalty-signoff">

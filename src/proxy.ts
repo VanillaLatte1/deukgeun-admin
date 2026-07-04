@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { ADMIN_COOKIE_NAME } from "@/lib/auth";
@@ -6,7 +6,7 @@ import { ADMIN_COOKIE_NAME } from "@/lib/auth";
 const bypassPrefixes = ["/_next", "/favicon.ico", "/public"];
 const staticFilePattern = /\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|map|txt|xml)$/i;
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (bypassPrefixes.some((prefix) => pathname.startsWith(prefix))) {

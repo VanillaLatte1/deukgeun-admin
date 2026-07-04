@@ -6,6 +6,7 @@ import {
   CalendarX2,
   ClipboardCheck,
   ClipboardList,
+  FileText,
   LayoutDashboard,
   UsersRound,
 } from "lucide-react";
@@ -39,6 +40,11 @@ const menus = [
     title: "주간 제외 관리",
     icon: CalendarX2,
   },
+  {
+    href: "/penalty-documents",
+    title: "벌금 문서 출력",
+    icon: FileText,
+  },
 ];
 
 type SidebarMenuProps = {
@@ -57,7 +63,7 @@ export default function SidebarMenu({
   const pathname = usePathname();
 
   return (
-    <nav className={cn("menu-list", className)}>
+    <nav className={cn("menu-list", className)} aria-label="주요 메뉴">
       {menus.map((menu) => {
         const Icon = menu.icon;
         const isActive =
@@ -70,7 +76,7 @@ export default function SidebarMenu({
               <Icon size={18} />
             </span>
             {showText ? (
-              <span className="menu-text" aria-hidden="true">
+              <span className="menu-text">
                 <span className="menu-title">{menu.title}</span>
               </span>
             ) : null}

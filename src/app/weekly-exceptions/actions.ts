@@ -10,12 +10,6 @@ export type WeeklyExceptionActionState = {
   submittedAt: number;
 };
 
-const initialState: WeeklyExceptionActionState = {
-  ok: false,
-  message: "",
-  submittedAt: 0,
-};
-
 function success(message: string): WeeklyExceptionActionState {
   return { ok: true, message, submittedAt: Date.now() };
 }
@@ -44,10 +38,11 @@ function revalidateWeeklyPages() {
   revalidatePath("/workouts");
   revalidatePath("/workout-records");
   revalidatePath("/weekly-exceptions");
+  revalidatePath("/penalty-documents");
 }
 
 export async function upsertWeeklyExceptionAction(
-  _prevState: WeeklyExceptionActionState = initialState,
+  _prevState: WeeklyExceptionActionState,
   formData: FormData,
 ): Promise<WeeklyExceptionActionState> {
   try {
@@ -83,7 +78,7 @@ export async function upsertWeeklyExceptionAction(
 }
 
 export async function deleteWeeklyExceptionAction(
-  _prevState: WeeklyExceptionActionState = initialState,
+  _prevState: WeeklyExceptionActionState,
   formData: FormData,
 ): Promise<WeeklyExceptionActionState> {
   try {

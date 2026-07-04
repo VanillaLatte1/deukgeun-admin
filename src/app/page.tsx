@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { SupabaseRequiredPanel } from "@/components/supabase-required-panel";
+import { Button } from "@/components/ui/button";
 import { COMMUNITY_START_WEEK, getCurrentWeekStart, getDashboardData } from "@/lib/data";
 import { getProgressStatus, statusLabel, type ProgressStatus } from "@/lib/progress";
 import { isSupabaseReady } from "@/lib/supabase-server";
@@ -120,6 +121,7 @@ export default async function Home({ searchParams }: HomeProps) {
     .filter((item) => getProgressStatus(item.doneSessions, item.targetSessions) === "excused")
     .map((item) => item.member.name);
   const recentCompact = data.recent.slice(0, 6);
+  const recentWeeks = [...weekStarts].reverse().slice(0, 8);
   const completionRate = data.totals.goals > 0
     ? Math.round((completeCount / data.totals.goals) * 100)
     : 0;
@@ -131,7 +133,7 @@ export default async function Home({ searchParams }: HomeProps) {
           <span className="dashboard-kicker">Dashboard Overview</span>
           <h2>메인 대시보드</h2>
           <p className="dashboard-hero-copy">
-            이번 주 운동 진행 현황과 주간 제외 인원을 한 화면에서 빠르게 확인할 수 있어요.
+            이번 주 운동 진행 현황과 주간 제외 인원을 한 화면에서 빠르게 확인합니다.
           </p>
           <div className="dashboard-week-row">
             <div className="dashboard-week-card">
@@ -153,8 +155,26 @@ export default async function Home({ searchParams }: HomeProps) {
               </div>
             </div>
           </div>
-          <div className="week-chip-list dashboard-week-chip-list">
-            {[...weekStarts].reverse().map((weekStart) => {
+
+          <form method="get" className="dashboard-week-picker">
+            <input type="hidden" name="sort" value={selectedSort} />
+            <label>
+              주차 선택
+              <select name="week" defaultValue={selectedWeek}>
+                {[...weekStarts].reverse().map((weekStart) => (
+                  <option key={weekStart} value={weekStart}>
+                    {weekStart} ({getWeekNumber(weekStart)}주차)
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button type="submit" className="inline-btn form-action-button">
+              변경
+            </Button>
+          </form>
+
+          <div className="week-chip-list dashboard-week-chip-list compact-week-chip-list">
+            {recentWeeks.map((weekStart) => {
               const active = weekStart === selectedWeek;
               return (
                 <Link
@@ -162,7 +182,7 @@ export default async function Home({ searchParams }: HomeProps) {
                   href={`/?week=${weekStart}&sort=${selectedSort}`}
                   className={`week-chip ${active ? "active" : ""}`}
                 >
-                  {weekStart} ({getWeekNumber(weekStart)}주차)
+                  {weekStart}
                 </Link>
               );
             })}

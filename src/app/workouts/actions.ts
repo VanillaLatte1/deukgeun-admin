@@ -60,6 +60,7 @@ function revalidateWorkoutPages() {
   revalidatePath("/");
   revalidatePath("/workouts");
   revalidatePath("/workout-records");
+  revalidatePath("/penalty-documents");
 }
 
 function validateWorkoutInput(
@@ -74,7 +75,7 @@ function validateWorkoutInput(
   const hasEndImage = Boolean(endImage && endImage.size > 0);
 
   if (!Number.isFinite(durationMinutes) || durationMinutes < policy.minimumValidMinutes) {
-    return failure(`${policy.label}은(는) 최소 ${policy.minimumValidMinutes}분 이상이어야 합니다.`);
+    return failure(`${policy.label}은 최소 ${policy.minimumValidMinutes}분 이상이어야 합니다.`);
   }
 
   if (!hasStartImage) {
@@ -88,6 +89,14 @@ function validateWorkoutInput(
   return null;
 }
 
+function normalizeSessionNo(value: FormDataEntryValue | null) {
+  const sessionNo = Number(value ?? 1);
+  if (!Number.isFinite(sessionNo)) {
+    return 1;
+  }
+  return Math.max(1, Math.min(5, Math.trunc(sessionNo)));
+}
+
 export async function createWorkoutSession(
   _prevState: WorkoutActionState,
   formData: FormData,
@@ -95,7 +104,7 @@ export async function createWorkoutSession(
   try {
     const memberId = String(formData.get("member_id") ?? "").trim();
     const workoutDate = String(formData.get("workout_date") ?? "").trim();
-    const sessionNo = Number(formData.get("session_no") ?? 1);
+    const sessionNo = normalizeSessionNo(formData.get("session_no"));
     const exerciseType = toWorkoutType(String(formData.get("exercise_type") ?? ""));
     const durationMinutes = Number(formData.get("duration_minutes") ?? 0);
     const notes = String(formData.get("notes") ?? "").trim();
@@ -158,7 +167,7 @@ export async function createWorkoutSession(
     }
 
     revalidateWorkoutPages();
-    return success("인증 저장이 완료되었습니다.");
+    return success("인증 데이터가 저장되었습니다.");
   } catch (error) {
     return failure(error instanceof Error ? error.message : "인증 저장 중 오류가 발생했습니다.");
   }
@@ -171,14 +180,14 @@ export async function updateWorkoutSession(
   try {
     const id = String(formData.get("id") ?? "").trim();
     const workoutDate = String(formData.get("workout_date") ?? "").trim();
-    const sessionNo = Number(formData.get("session_no") ?? 1);
+    const sessionNo = normalizeSessionNo(formData.get("session_no"));
     const exerciseType = toWorkoutType(String(formData.get("exercise_type") ?? ""));
     const inputDurationMinutes = Number(formData.get("duration_minutes") ?? 0);
     const notesRaw = String(formData.get("notes") ?? "").trim();
     const startImage = formData.get("start_image") as File | null;
     const endImage = formData.get("end_image") as File | null;
 
-    if (!id || !workoutDate || !Number.isFinite(sessionNo) || !Number.isFinite(inputDurationMinutes)) {
+    if (!id || !workoutDate || !Number.isFinite(inputDurationMinutes)) {
       return failure("수정 값이 올바르지 않습니다.");
     }
 
@@ -202,10 +211,8 @@ export async function updateWorkoutSession(
     const hasEndProofAfterUpdate =
       policy.requiredImageCount === 1 ? true : Boolean(session.end_image_path || nextEndCandidate);
 
-    const durationMinutes = inputDurationMinutes;
-
-    if (durationMinutes < policy.minimumValidMinutes) {
-      return failure(`${policy.label}은(는) 최소 ${policy.minimumValidMinutes}분 이상이어야 합니다.`);
+    if (!Number.isFinite(inputDurationMinutes) || inputDurationMinutes < policy.minimumValidMinutes) {
+      return failure(`${policy.label}은 최소 ${policy.minimumValidMinutes}분 이상이어야 합니다.`);
     }
 
     if (!hasStartProofAfterUpdate) {
@@ -214,6 +221,27 @@ export async function updateWorkoutSession(
 
     if (!hasEndProofAfterUpdate) {
       return failure("일반 운동은 시작/종료 이미지를 모두 첨부해야 합니다.");
+    }
+
+    const weekStart = getCurrentWeekStart(new Date(workoutDate));
+    const weekEndDate = new Date(weekStart);
+    weekEndDate.setDate(weekEndDate.getDate() + 7);
+    const weekEnd = weekEndDate.toISOString().slice(0, 10);
+    const { data: duplicateSessions, error: duplicateError } = await supabase
+      .from("workout_sessions")
+      .select("id")
+      .eq("member_id", session.member_id)
+      .eq("session_no", sessionNo)
+      .gte("workout_date", weekStart)
+      .lt("workout_date", weekEnd)
+      .neq("id", id);
+
+    if (duplicateError) {
+      throw duplicateError;
+    }
+
+    if ((duplicateSessions ?? []).length > 0) {
+      return failure("같은 주간에 동일 회차가 이미 있어 수정할 수 없습니다.");
     }
 
     const bucket = "workout-proofs";
@@ -231,9 +259,9 @@ export async function updateWorkoutSession(
       .from("workout_sessions")
       .update({
         workout_date: workoutDate,
-        session_no: Math.max(1, Math.min(5, sessionNo)),
+        session_no: sessionNo,
         exercise_type: exerciseType,
-        duration_minutes: Math.max(0, durationMinutes),
+        duration_minutes: Math.max(0, inputDurationMinutes),
         notes: notesRaw || null,
         ...(nextStartPath ? { start_image_path: nextStartPath } : {}),
         ...(policy.requiredImageCount === 2
@@ -288,7 +316,7 @@ export async function deleteWorkoutSession(
     }
 
     revalidateWorkoutPages();
-    return success("인증 내역이 삭제되었습니다.");
+    return success("인증 내역을 삭제했습니다.");
   } catch (error) {
     return failure(error instanceof Error ? error.message : "인증 삭제 중 오류가 발생했습니다.");
   }
