@@ -1,4 +1,5 @@
 import { FileText, Landmark, Receipt, Target } from "lucide-react";
+import Image from "next/image";
 
 import { PenaltyDocumentFilterForm } from "@/components/penalty-document-filter-form";
 import { getPenaltyDocumentData, WEEKLY_SHORTFALL_FINE_AMOUNT } from "@/lib/data";
@@ -109,7 +110,7 @@ export default async function PenaltyDocumentsPage({
         <section className="penalty-document-shell">
           <article className="penalty-document">
             <div className="penalty-watermark" aria-hidden="true">
-              <img src="/logo.png" alt="" />
+              <Image src="/logo.png" alt="" width={540} height={270} />
             </div>
 
             <header className="penalty-document-head">
@@ -232,7 +233,7 @@ export default async function PenaltyDocumentsPage({
                 <strong>득근둑근</strong>
                 <span>운영진</span>
               </div>
-              <img className="penalty-stamp" src="/sign.png" alt="득근둑근 운영진 직인" />
+              <Image className="penalty-stamp" src="/sign.png" alt="득근둑근 운영진 직인" width={96} height={96} />
             </section>
           </article>
         </section>

@@ -83,6 +83,7 @@ export default async function WorkoutRecordsPage({ searchParams }: WorkoutRecord
       <section className="panel panel-highlight">
         <div className="section-head members-form-head">
           <div>
+            <span className="page-eyebrow">Verification History</span>
             <h2 className="title-with-icon">
               <ClipboardList size={18} /> 인증 기록 관리
             </h2>

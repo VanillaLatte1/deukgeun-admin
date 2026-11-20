@@ -79,6 +79,7 @@ export default async function WeeklyExceptionsPage({ searchParams }: WeeklyExcep
       <section className="panel panel-highlight">
         <div className="section-head members-form-head">
           <div>
+            <span className="page-eyebrow">Weekly Exceptions</span>
             <h2 className="title-with-icon">
               <CalendarX2 size={18} /> 주간 제외 관리
             </h2>

@@ -1,6 +1,10 @@
 ﻿import { NextResponse } from "next/server";
 
-import { ADMIN_COOKIE_NAME } from "@/lib/auth";
+import {
+  ADMIN_COOKIE_NAME,
+  ADMIN_SESSION_MAX_AGE_SECONDS,
+  createAdminSessionCookieValue,
+} from "@/lib/auth";
 import { verifyAdminCredentials } from "@/lib/admin-auth";
 
 export async function POST(request: Request) {
@@ -18,12 +22,12 @@ export async function POST(request: Request) {
   }
 
   const response = NextResponse.redirect(new URL("/", request.url));
-  response.cookies.set(ADMIN_COOKIE_NAME, "ok", {
+  response.cookies.set(ADMIN_COOKIE_NAME, await createAdminSessionCookieValue(), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 8,
+    maxAge: ADMIN_SESSION_MAX_AGE_SECONDS,
   });
 
   return response;

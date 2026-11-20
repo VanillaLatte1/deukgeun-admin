@@ -54,6 +54,8 @@ function ProofCell({
 
   return (
     <a className="proof-thumb-link" href={url} target="_blank" rel="noreferrer" aria-label={`${label} 새 창으로 보기`}>
+      {/* Signed proof URLs can expire and are intentionally rendered without optimization. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img className="proof-thumb" src={url} alt={label} loading="lazy" />
       <span>
         보기
@@ -101,7 +103,7 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
   return (
     <>
       <div className="table-scroll table-scroll-wide">
-        <table className="table">
+        <table className="table" aria-label="운동 인증 기록">
           <thead>
             <tr>
               <th>등록 시각</th>
@@ -156,6 +158,11 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
                 </tr>
               );
             })}
+            {workouts.length === 0 ? (
+              <tr>
+                <td colSpan={10} className="table-empty-cell">조건에 맞는 인증 기록이 없습니다.</td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
@@ -245,6 +252,7 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
                   </Button>
                 </div>
                 {editingWorkout.start_image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={editingWorkout.start_image_url} alt="시작 인증 이미지" loading="lazy" />
                 ) : (
                   <span className="muted">이미지를 불러올 수 없습니다. 수기 보정 데이터일 수 있습니다.</span>
@@ -270,6 +278,7 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
                     </Button>
                   </div>
                   {editingWorkout.end_image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={editingWorkout.end_image_url} alt="종료 인증 이미지" loading="lazy" />
                   ) : (
                     <span className="muted">이미지를 불러올 수 없습니다. 수기 보정 데이터일 수 있습니다.</span>

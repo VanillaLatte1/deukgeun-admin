@@ -26,7 +26,7 @@ export function MembersTable({ members, settlementPeriodLabel }: MembersTablePro
 
   return (
     <div className="table-scroll">
-      <table className="table">
+      <table className="table" aria-label="회원 목록">
         <thead>
           <tr>
             <th>이름</th>
@@ -45,6 +45,14 @@ export function MembersTable({ members, settlementPeriodLabel }: MembersTablePro
               key={member.id}
               className="clickable-row"
               onClick={() => router.push(`/members/${member.id}/edit`)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  router.push(`/members/${member.id}/edit`);
+                }
+              }}
+              tabIndex={0}
+              aria-label={`${member.name} 회원 정보 수정`}
             >
               <td>{member.name}</td>
               <td>{member.genderLabel}</td>
@@ -67,6 +75,11 @@ export function MembersTable({ members, settlementPeriodLabel }: MembersTablePro
               </td>
             </tr>
           ))}
+          {members.length === 0 ? (
+            <tr>
+              <td colSpan={8} className="table-empty-cell">등록된 회원이 없습니다.</td>
+            </tr>
+          ) : null}
         </tbody>
       </table>
     </div>

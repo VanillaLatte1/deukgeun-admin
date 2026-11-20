@@ -122,6 +122,8 @@ export function FileInputField({
 
       <label htmlFor={id} className="file-control">
         {previewUrl ? (
+          // Object URLs are local previews and should not pass through the image optimizer.
+          // eslint-disable-next-line @next/next/no-img-element
           <img className="file-preview" src={previewUrl} alt={`${label} 미리보기`} />
         ) : (
           <span className="file-placeholder-icon" aria-hidden="true">

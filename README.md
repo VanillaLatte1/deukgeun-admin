@@ -20,6 +20,7 @@
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `ADMIN_SESSION_SECRET` (선택, 32자 이상의 무작위 문자열 권장. 미설정 시 service role key 사용)
 
 예시 파일:
 - `.env.example`

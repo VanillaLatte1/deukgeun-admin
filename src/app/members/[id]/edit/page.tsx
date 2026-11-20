@@ -36,6 +36,7 @@ export default async function EditMemberPage({ params }: EditMemberPageProps) {
       <section className="panel panel-highlight">
         <div className="section-head members-form-head">
           <div>
+            <span className="page-eyebrow">Member Detail</span>
             <h2 className="title-with-icon">
               <PencilLine size={18} /> 회원 정보 수정
             </h2>

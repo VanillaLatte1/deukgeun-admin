@@ -19,6 +19,7 @@ export default async function NewMemberPage() {
       <section className="panel panel-highlight">
         <div className="section-head members-form-head">
           <div>
+            <span className="page-eyebrow">New Member</span>
             <h2 className="title-with-icon">
               <UserPlus size={18} /> 회원 등록 및 목표 설정
             </h2>

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { ADMIN_COOKIE_NAME } from "@/lib/auth";
+import { ADMIN_COOKIE_NAME, verifyAdminSessionCookie } from "@/lib/auth";
 
 const bypassPrefixes = ["/_next", "/favicon.ico", "/public"];
 const staticFilePattern = /\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|map|txt|xml)$/i;
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (bypassPrefixes.some((prefix) => pathname.startsWith(prefix))) {
@@ -21,7 +21,9 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const isAuthed = request.cookies.get(ADMIN_COOKIE_NAME)?.value === "ok";
+  const isAuthed = await verifyAdminSessionCookie(
+    request.cookies.get(ADMIN_COOKIE_NAME)?.value,
+  );
 
   if (!isAuthed) {
     return NextResponse.redirect(new URL("/login", request.url));
