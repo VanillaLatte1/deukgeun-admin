@@ -146,10 +146,10 @@ export function WorkoutEntryForm({
         <input type="hidden" name="session_no" value={effectiveSessionNo} />
 
         <div className="admin-form-notice">
-          <strong>운동 인증 등록 전에 회원, 날짜, 회차를 확인해 주세요.</strong>
+          <strong>회원과 날짜, 회차를 확인해 주세요.</strong>
           <span>
-            일반 운동은 시작/종료 사진이 필요하고, 러닝은 인증 사진 1장만 등록하면 됩니다.
-            날짜나 회차를 정정해야 할 때는 관리자 보정 모드를 켜세요.
+            사진은 선택 사항입니다. 일반 운동은 시작/종료 사진, 러닝은 인증 사진을 첨부할 수 있습니다.
+            회차를 직접 선택하려면 관리자 보정 모드를 사용하세요.
           </span>
         </div>
 
@@ -157,9 +157,9 @@ export function WorkoutEntryForm({
           <div className="admin-form-section-head">
             <div className="admin-form-section-title-row">
               <h3>회원 및 운동 정보</h3>
-              <span className="admin-form-step">1</span>
+              <span className="admin-form-step" aria-hidden="true">1</span>
             </div>
-            <p>회원, 날짜, 운동 종류, 운동 시간을 먼저 설정합니다.</p>
+            <p>운동 내용과 주간 회차를 입력합니다.</p>
           </div>
 
           <div className="admin-form-grid admin-form-grid-workout-basic">
@@ -218,7 +218,7 @@ export function WorkoutEntryForm({
             </label>
           </div>
 
-          <div className="admin-session-panel">
+          <div className="admin-session-panel" aria-live="polite">
             <div>
               <strong>등록된 회차</strong>
               <span>{takenSessionText}</span>
@@ -226,7 +226,7 @@ export function WorkoutEntryForm({
             <div>
               <strong>{sessionMode === "manual" ? "보정 회차" : "추천 회차"}</strong>
               {sessionMode === "manual" ? (
-                <select value={selectedSessionNo} onChange={(event) => setSelectedSessionNo(event.target.value)}>
+                <select aria-label="보정 회차" value={selectedSessionNo} onChange={(event) => setSelectedSessionNo(event.target.value)}>
                   {sessionOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.value}회차{option.disabled ? " - 이미 등록됨" : ""}
@@ -240,32 +240,32 @@ export function WorkoutEntryForm({
           </div>
 
           {sessionMode === "manual" && takenSessions.has(selectedSessionNo) ? (
-            <p className="error">
+            <p className="error" role="alert">
               선택한 회차는 이미 등록되어 있습니다. 저장 시 서버에서 중복을 막습니다.
             </p>
           ) : null}
 
           {isExcusedMember ? (
-            <p className="error">
+            <p className="error" role="status">
               이 회원은 이번 주 제외 처리 상태입니다. 기록은 저장할 수 있지만 진행 집계에서는 제외됩니다.
             </p>
           ) : null}
 
           {selectedMemberId && !hasAutoSession && sessionMode === "auto" ? (
-            <p className="error">선택한 회원은 이번 주 1~5회차 인증이 모두 등록되어 있습니다.</p>
+            <p className="error" role="status">선택한 회원은 이번 주 1~5회차 인증이 모두 등록되어 있습니다.</p>
           ) : null}
         </section>
 
         <section className="admin-form-section">
           <div className="admin-form-section-head">
             <div className="admin-form-section-title-row">
-              <h3>인증 이미지</h3>
-              <span className="admin-form-step">2</span>
+              <h3>인증 이미지 (선택)</h3>
+              <span className="admin-form-step" aria-hidden="true">2</span>
             </div>
             <p>
               {policy.requiredImageCount === 1
-                ? "러닝은 인증 사진 1장만 업로드합니다."
-                : "일반 운동은 시작과 종료 이미지를 각각 업로드합니다."}
+                ? "러닝 인증 사진 한 장을 첨부할 수 있습니다."
+                : "시작과 종료 이미지를 첨부할 수 있습니다."}
             </p>
           </div>
 
@@ -273,11 +273,10 @@ export function WorkoutEntryForm({
             <FileInputField
               label={policy.requiredImageCount === 1 ? "인증 이미지" : "시작 이미지"}
               name="start_image"
-              required
             />
 
             {policy.requiredImageCount === 2 ? (
-              <FileInputField label="종료 이미지" name="end_image" required />
+              <FileInputField label="종료 이미지" name="end_image" />
             ) : (
               <div className="admin-form-helper-card">
                 <strong>러닝 등록 안내</strong>
@@ -291,7 +290,7 @@ export function WorkoutEntryForm({
           <div className="admin-form-section-head">
             <div className="admin-form-section-title-row">
               <h3>추가 메모</h3>
-              <span className="admin-form-step">3</span>
+              <span className="admin-form-step" aria-hidden="true">3</span>
             </div>
             <p>정정 사유나 확인 근거가 있으면 간단히 남겨 주세요.</p>
           </div>
@@ -304,7 +303,7 @@ export function WorkoutEntryForm({
           </div>
         </section>
 
-        {!state.ok && state.message ? <p className="error">{state.message}</p> : null}
+        {!state.ok && state.message ? <p className="error" role="alert">{state.message}</p> : null}
 
         <div className="admin-form-actions">
           <Button type="submit" size="lg" disabled={isPending || (!effectiveSessionNo && sessionMode === "auto")}>

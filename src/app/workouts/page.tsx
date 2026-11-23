@@ -30,7 +30,6 @@ export default async function WorkoutsPage() {
       <section className="panel panel-highlight">
         <div className="section-head members-form-head">
           <div>
-            <span className="page-eyebrow">New Verification</span>
             <h2 className="title-with-icon">
               <ClipboardCheck size={18} /> 운동 인증 등록
             </h2>

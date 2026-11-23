@@ -27,7 +27,7 @@ export default async function LoginPage({
             <Image src="/logo.png" alt="득근둑근 로고" className="logo-image" width={220} height={110} priority />
           </div>
           <div className="login-brand-copy">
-            <span>DEUKGEUN ADMIN</span>
+            <span>득근둑근 관리자</span>
             <h1>운영은 단단하게,<br />관리는 가볍게.</h1>
             <p>회원 목표부터 운동 인증, 정산 문서까지 한곳에서 빠르게 관리하세요.</p>
             <div className="login-feature-list" aria-label="주요 기능">

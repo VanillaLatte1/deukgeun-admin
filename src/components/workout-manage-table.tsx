@@ -30,6 +30,15 @@ const initialActionState: WorkoutActionState = {
   submittedAt: 0,
 };
 
+// Fixed Korean time without depending on the server or browser's locale/ICU data.
+function formatRegisteredAt(value: string) {
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return "-";
+  const date = new Date(timestamp + 9 * 60 * 60 * 1000);
+  const pad = (number: number) => String(number).padStart(2, "0");
+  return `${date.getUTCFullYear()}.${pad(date.getUTCMonth() + 1)}.${pad(date.getUTCDate())} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}`;
+}
+
 function ProofCell({
   label,
   path,
@@ -73,6 +82,8 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
   const [showStartUploader, setShowStartUploader] = useState(false);
   const [showEndUploader, setShowEndUploader] = useState(false);
   const [editingExerciseType, setEditingExerciseType] = useState(WORKOUT_TYPE_GENERAL);
+  const [editOpenedAt, setEditOpenedAt] = useState(0);
+  const [deleteOpenedAt, setDeleteOpenedAt] = useState(0);
 
   const [updateState, updateAction, updatePending] = useActionState(
     updateWorkoutSession,
@@ -84,11 +95,12 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
     if (updateState.ok || deleteState.ok) {
       router.refresh();
     }
-  }, [updateState.ok, deleteState.ok, router]);
+  }, [updateState.ok, updateState.submittedAt, deleteState.ok, deleteState.submittedAt, router]);
 
   const editingWorkout = workouts.find((item) => item.id === editingId) ?? null;
 
   function openEditor(workout: WorkoutSession) {
+    setEditOpenedAt(updateState.submittedAt);
     setEditingId(workout.id);
     setShowStartUploader(false);
     setShowEndUploader(false);
@@ -126,7 +138,7 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
 
               return (
                 <tr key={workout.id}>
-                  <td>{new Date(workout.created_at).toLocaleString("ko-KR")}</td>
+                  <td><time dateTime={workout.created_at}>{formatRegisteredAt(workout.created_at)}</time></td>
                   <td>{workout.members?.name ?? "-"}</td>
                   <td>{workout.workout_date}</td>
                   <td>{workout.session_no}회차</td>
@@ -149,7 +161,7 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setDeleteTargetId(workout.id)}
+                        onClick={() => { setDeleteOpenedAt(deleteState.submittedAt); setDeleteTargetId(workout.id); }}
                       >
                         삭제
                       </Button>
@@ -167,11 +179,11 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
         </table>
       </div>
 
-      {updateState.message && !updateState.ok ? <p className="error">{updateState.message}</p> : null}
-      {deleteState.message && !deleteState.ok ? <p className="error">{deleteState.message}</p> : null}
+      {updateState.message && !updateState.ok && updateState.submittedAt > editOpenedAt ? <p className="error">{updateState.message}</p> : null}
+      {deleteState.message && !deleteState.ok && deleteState.submittedAt > deleteOpenedAt ? <p className="error">{deleteState.message}</p> : null}
 
       <Modal
-        open={Boolean(editingWorkout) && !updateState.ok}
+        open={Boolean(editingWorkout) && !(updateState.ok && updateState.submittedAt > editOpenedAt)}
         title="인증 수정"
         description="운동 날짜, 회차, 종류, 시간을 정정하고 필요할 때만 이미지를 교체하세요."
         onClose={() => setEditingId(null)}
@@ -200,6 +212,9 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
                 <option value="3">3회차</option>
                 <option value="4">4회차</option>
                 <option value="5">5회차</option>
+                {editingWorkout.session_no > 5 ? (
+                  <option value={String(editingWorkout.session_no)}>{editingWorkout.session_no}회차 (기존 기록)</option>
+                ) : null}
               </select>
             </label>
 
@@ -255,7 +270,7 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={editingWorkout.start_image_url} alt="시작 인증 이미지" loading="lazy" />
                 ) : (
-                  <span className="muted">이미지를 불러올 수 없습니다. 수기 보정 데이터일 수 있습니다.</span>
+                  <span className="muted">{editingWorkout.start_image_path ? "이미지를 불러올 수 없습니다." : "첨부된 이미지가 없습니다."}</span>
                 )}
                 {showStartUploader ? (
                   <FileInputField
@@ -281,7 +296,7 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={editingWorkout.end_image_url} alt="종료 인증 이미지" loading="lazy" />
                   ) : (
-                    <span className="muted">이미지를 불러올 수 없습니다. 수기 보정 데이터일 수 있습니다.</span>
+                    <span className="muted">{editingWorkout.end_image_path ? "이미지를 불러올 수 없습니다." : "첨부된 이미지가 없습니다."}</span>
                   )}
                   {showEndUploader ? <FileInputField label="종료 이미지 업로드" name="end_image" /> : null}
                 </div>
@@ -291,7 +306,7 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
                     <strong>러닝 안내</strong>
                   </div>
                   <span className="muted">
-                    러닝은 사진 1장만 사용하고, 저장하면 기존 종료 이미지는 제거됩니다.
+                    러닝은 인증 사진 1장을 선택해 첨부할 수 있습니다. 기존 종료 이미지는 유지됩니다.
                   </span>
                 </div>
               )}
@@ -309,7 +324,7 @@ export function WorkoutManageTable({ workouts }: WorkoutManageTableProps) {
       </Modal>
 
       <Modal
-        open={Boolean(deleteTargetId) && !deleteState.ok}
+        open={Boolean(deleteTargetId) && !(deleteState.ok && deleteState.submittedAt > deleteOpenedAt)}
         title="인증 삭제"
         description="정말 이 인증을 삭제할까요? 삭제 후에는 복구할 수 없습니다."
         onClose={() => setDeleteTargetId(null)}

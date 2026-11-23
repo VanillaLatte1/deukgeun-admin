@@ -49,23 +49,16 @@ export function WeeklyExceptionManager({
     () => members.filter((member) => !usedMemberIds.has(member.id)),
     [members, usedMemberIds],
   );
-  const feedback = createState.message || deleteState.message;
-  const isSuccess = createState.ok || deleteState.ok;
+  const latestState = createState.submittedAt >= deleteState.submittedAt ? createState : deleteState;
 
   return (
     <>
       <section className="panel admin-detail-panel">
         <form action={createAction} className="admin-detail-form">
-          <div className="admin-form-notice">
-            <strong>{weekStart} 주차의 제외 대상을 관리합니다.</strong>
-            <span>해당 주차에서 진행 체크를 빼야 하는 회원만 선택해서 등록하세요.</span>
-          </div>
-
-          <section className="admin-form-section">
+          <section className="admin-detail-form">
             <div className="admin-form-section-head">
               <div className="admin-form-section-title-row">
-                <h3>제외 대상 등록</h3>
-                <span className="admin-form-step">1</span>
+                <h3>{weekStart} 주차 제외 대상 등록</h3>
               </div>
               <p>회원과 사유를 입력하면 해당 주차의 목표/벌금 계산에서 제외됩니다.</p>
             </div>
@@ -94,8 +87,8 @@ export function WeeklyExceptionManager({
             </div>
           </section>
 
-          {feedback ? (
-            <p className={isSuccess ? "admin-form-feedback" : "error"}>{feedback}</p>
+          {latestState.message ? (
+            <p className={latestState.ok ? "admin-form-feedback" : "error"} role="status" aria-live="polite">{latestState.message}</p>
           ) : null}
 
           <div className="admin-form-actions">
@@ -107,38 +100,45 @@ export function WeeklyExceptionManager({
       </section>
 
       <section className="panel admin-detail-panel">
-        <div className="admin-form-section">
+        <div className="admin-detail-form">
           <div className="admin-form-section-head">
             <div className="admin-form-section-title-row">
               <h3>등록된 제외 대상</h3>
-              <span className="admin-form-step">{exceptions.length}</span>
+              <span className="result-count">{exceptions.length}명</span>
             </div>
             <p>이미 제외된 회원은 아래 목록에서 바로 해제할 수 있습니다.</p>
           </div>
 
-          <div className="dashboard-status-stack">
-            {exceptions.length > 0 ? (
-              exceptions.map((item) => (
-                <div className="dashboard-status-card" key={`${item.member_id}-${item.week_start}`}>
-                  <div className="dashboard-status-head">
-                    <strong>{item.members?.name ?? "-"}</strong>
-                    <form action={deleteAction}>
-                      <input type="hidden" name="member_id" value={item.member_id} />
-                      <input type="hidden" name="week_start" value={item.week_start} />
-                      <Button type="submit" variant="outline" disabled={deletePending}>
-                        해제
-                      </Button>
-                    </form>
-                  </div>
-                  <p className="dashboard-status-copy">{item.reason?.trim() || "사유 없음"}</p>
-                </div>
-              ))
-            ) : (
+          {exceptions.length > 0 ? (
+            <div className="table-scroll">
+              <table className="table exception-table" aria-label={`${weekStart} 주차 제외 대상`}>
+                <thead>
+                  <tr><th scope="col">회원</th><th scope="col">제외 사유</th><th scope="col">관리</th></tr>
+                </thead>
+                <tbody>
+                  {exceptions.map((item) => (
+                    <tr key={`${item.member_id}-${item.week_start}`}>
+                      <td>{item.members?.name ?? "-"}</td>
+                      <td>{item.reason?.trim() || "사유 없음"}</td>
+                      <td>
+                        <form action={deleteAction}>
+                          <input type="hidden" name="member_id" value={item.member_id} />
+                          <input type="hidden" name="week_start" value={item.week_start} />
+                          <Button type="submit" variant="outline" disabled={deletePending} aria-label={`${item.members?.name ?? "회원"} 제외 해제`}>
+                            해제
+                          </Button>
+                        </form>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
               <div className="weekly-exceptions-empty">
-                <p className="weekly-exceptions-subcopy">이번 주 제외 처리된 회원이 없습니다.</p>
+                <p className="weekly-exceptions-subcopy">선택한 주차에 제외 처리된 회원이 없습니다.</p>
               </div>
-            )}
-          </div>
+          )}
         </div>
       </section>
     </>

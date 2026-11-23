@@ -79,7 +79,6 @@ export default async function WeeklyExceptionsPage({ searchParams }: WeeklyExcep
       <section className="panel panel-highlight">
         <div className="section-head members-form-head">
           <div>
-            <span className="page-eyebrow">Weekly Exceptions</span>
             <h2 className="title-with-icon">
               <CalendarX2 size={18} /> 주간 제외 관리
             </h2>
@@ -91,11 +90,10 @@ export default async function WeeklyExceptionsPage({ searchParams }: WeeklyExcep
       </section>
 
       <section className="panel admin-detail-panel">
-        <div className="admin-form-section">
+        <div className="admin-detail-form">
           <div className="admin-form-section-head">
             <div className="admin-form-section-title-row">
               <h3>주차 선택</h3>
-              <span className="admin-form-step">0</span>
             </div>
             <p>제외 처리를 적용할 기준 주차를 먼저 선택하세요.</p>
           </div>
@@ -118,12 +116,13 @@ export default async function WeeklyExceptionsPage({ searchParams }: WeeklyExcep
             </div>
           </form>
 
-          <div className="week-chip-list compact-week-chip-list">
+          <div className="week-chip-list compact-week-chip-list" aria-label="최근 주차 바로가기">
             {recentWeeks.map((weekStart) => (
               <Link
                 key={weekStart}
                 href={`/weekly-exceptions?week=${weekStart}`}
                 className={`week-chip ${weekStart === selectedWeek ? "active" : ""}`}
+                aria-current={weekStart === selectedWeek ? "page" : undefined}
               >
                 {weekStart}
               </Link>

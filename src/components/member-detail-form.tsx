@@ -25,6 +25,7 @@ type MemberDetailFormProps = {
     june_goal_proof_achieved: boolean;
     june_goal_proof_date: string | null;
     june_goal_proof_note: string | null;
+    activity_start_date: string | null;
   } | null;
   goal?: {
     target_sessions: number;
@@ -64,17 +65,17 @@ export function MemberDetailForm({
         {member ? <input type="hidden" name="member_id" value={member.id} /> : null}
 
         <div className="member-form-notice">
-          <strong>운영자가 확인 가능한 정보만 입력합니다.</strong>
-          <span>기본 정보, 주간 목표, 최종 목표 판정, 필요한 정산 정보만 순서대로 저장하세요.</span>
+          <strong>확인된 회원 정보를 입력해 주세요.</strong>
+          <span>기본 정보와 주간 목표, 최종 목표와 정산 정보를 함께 저장합니다.</span>
         </div>
 
         <section className="member-form-section">
           <div className="member-form-section-head">
             <div className="member-form-section-title-row">
               <h3>기본 정보</h3>
-              <span className="member-form-step">1</span>
+              <span className="member-form-step" aria-hidden="true">1</span>
             </div>
-            <p>회원명과 성별 같은 기본 프로필을 입력합니다.</p>
+            <p>기본 정보와 집계 시작일을 입력합니다.</p>
           </div>
 
           <div className="member-form-grid member-form-grid-basic">
@@ -92,6 +93,11 @@ export function MemberDetailForm({
                 { value: "F", label: "여성" },
               ]}
             />
+            <label>
+              집계 시작일 (선택)
+              <input type="date" name="activity_start_date" aria-describedby="activity-start-help" defaultValue={member?.activity_start_date ?? ""} />
+              <span id="activity-start-help">설정한 날짜가 속한 주부터 집계합니다.</span>
+            </label>
           </div>
         </section>
 
@@ -99,9 +105,9 @@ export function MemberDetailForm({
           <div className="member-form-section-head">
             <div className="member-form-section-title-row">
               <h3>주간 목표</h3>
-              <span className="member-form-step">2</span>
+              <span className="member-form-step" aria-hidden="true">2</span>
             </div>
-            <p>운영 기준이 되는 주간 운동 횟수와 기본 운동 시간을 설정합니다.</p>
+            <p>주간 운동 횟수와 기본 운동 시간을 설정합니다.</p>
           </div>
 
           <div className="member-form-grid member-form-grid-weekly">

@@ -23,6 +23,7 @@ export type Member = {
   june_goal_proof_achieved: boolean;
   june_goal_proof_date: string | null;
   june_goal_proof_note: string | null;
+  activity_start_date: string | null;
   created_at: string;
 };
 
@@ -134,7 +135,7 @@ function getWeekRange(weekStart: string) {
 export async function listMembers() {
   const supabase = createSupabaseAdmin();
   const fullSelect =
-    "id, name, gender, overall_goal_title, overall_goal_value, overall_goal_achieved, penalty_amount, june_goal_proof_achieved, june_goal_proof_date, june_goal_proof_note, created_at";
+    "*";
   const { data, error } = await supabase
     .from("members")
     .select(fullSelect)
@@ -168,6 +169,7 @@ export async function listMembers() {
     | "june_goal_proof_achieved"
     | "june_goal_proof_date"
     | "june_goal_proof_note"
+    | "activity_start_date"
   >[]).map(
     (member) => ({
       ...member,
@@ -178,6 +180,7 @@ export async function listMembers() {
       june_goal_proof_achieved: false,
       june_goal_proof_date: null,
       june_goal_proof_note: null,
+      activity_start_date: null,
     }),
   );
 }
@@ -185,7 +188,7 @@ export async function listMembers() {
 export async function getMemberById(memberId: string) {
   const supabase = createSupabaseAdmin();
   const fullSelect =
-    "id, name, gender, overall_goal_title, overall_goal_value, overall_goal_achieved, penalty_amount, june_goal_proof_achieved, june_goal_proof_date, june_goal_proof_note, created_at";
+    "*";
   const { data, error } = await supabase
     .from("members")
     .select(fullSelect)
@@ -224,6 +227,7 @@ export async function getMemberById(memberId: string) {
       | "june_goal_proof_achieved"
       | "june_goal_proof_date"
       | "june_goal_proof_note"
+      | "activity_start_date"
     >),
     overall_goal_title: null,
     overall_goal_value: null,
@@ -232,6 +236,7 @@ export async function getMemberById(memberId: string) {
     june_goal_proof_achieved: false,
     june_goal_proof_date: null,
     june_goal_proof_note: null,
+    activity_start_date: null,
   };
 }
 
@@ -419,8 +424,13 @@ export async function getDashboardData(weekStart: string) {
   const goalByMember = new Map(goals.map((goal) => [goal.member_id, goal]));
   const doneByMember = new Map<string, { sessions: number; minutes: number }>();
   const exceptionByMember = new Map(exceptions.map((item) => [item.member_id, item]));
+  const activityStarts = new Map(members.map((member) => [member.id, member.activity_start_date]));
 
-  for (const workout of workouts) {
+  const eligibleWorkouts = workouts.filter((workout) => {
+    const startDate = activityStarts.get(workout.member_id);
+    return !startDate || workout.workout_date >= startDate;
+  });
+  for (const workout of eligibleWorkouts) {
     const prev = doneByMember.get(workout.member_id) ?? { sessions: 0, minutes: 0 };
     doneByMember.set(workout.member_id, {
       sessions: prev.sessions + 1,
@@ -428,7 +438,7 @@ export async function getDashboardData(weekStart: string) {
     });
   }
 
-  const memberStats = members.map((member) => {
+  const memberStats = members.filter((member) => !member.activity_start_date || member.activity_start_date < getWeekRange(weekStart).to).map((member) => {
     const goal = goalByMember.get(member.id);
     const done = doneByMember.get(member.id) ?? { sessions: 0, minutes: 0 };
     const exception = exceptionByMember.get(member.id) ?? null;
@@ -453,11 +463,11 @@ export async function getDashboardData(weekStart: string) {
       activeMembers: activeMemberStats.length,
       excusedMembers: memberStats.length - activeMemberStats.length,
       goals: activeMemberStats.filter((item) => item.targetSessions > 0).length,
-      workouts: workouts.length,
-      minutes: workouts.reduce((acc, cur) => acc + cur.duration_minutes, 0),
+      workouts: eligibleWorkouts.length,
+      minutes: eligibleWorkouts.reduce((acc, cur) => acc + cur.duration_minutes, 0),
     },
     memberStats,
-    recent: workouts.slice(0, 10),
+    recent: eligibleWorkouts.slice(0, 10),
     exceptions,
   };
 }
@@ -588,8 +598,11 @@ export async function getPenaltyDocumentData(
   const exceptionKeySet = new Set(exceptions.map((item) => `${item.member_id}:${item.week_start}`));
   const excusedCountByMember = new Map<string, number>();
   const doneTotalByMember = new Map<string, number>();
+  const memberById = new Map(members.map((member) => [member.id, member]));
 
   for (const workout of workouts) {
+    const startDate = memberById.get(workout.member_id)?.activity_start_date;
+    if (startDate && workout.workout_date < startDate) continue;
     const weekStart = getCurrentWeekStart(parseYmd(workout.workout_date));
     const weekKey = `${workout.member_id}:${weekStart}`;
     workoutCountByMemberWeek.set(weekKey, (workoutCountByMemberWeek.get(weekKey) ?? 0) + 1);
@@ -597,6 +610,8 @@ export async function getPenaltyDocumentData(
   }
 
   for (const exception of exceptions) {
+    const startDate = memberById.get(exception.member_id)?.activity_start_date;
+    if (startDate && startDate >= getWeekRange(exception.week_start).to) continue;
     excusedCountByMember.set(
       exception.member_id,
       (excusedCountByMember.get(exception.member_id) ?? 0) + 1,
@@ -605,7 +620,8 @@ export async function getPenaltyDocumentData(
 
   const summaries: PenaltyDocumentSummary[] = members.map((member) => {
     const weeklyTargetSessions = goalByMember.get(member.id)?.target_sessions ?? 0;
-    const activeWeeks = weekStarts.filter((weekStart) => !exceptionKeySet.has(`${member.id}:${weekStart}`));
+    const eligibleWeeks = weekStarts.filter((weekStart) => !member.activity_start_date || member.activity_start_date < getWeekRange(weekStart).to);
+    const activeWeeks = eligibleWeeks.filter((weekStart) => !exceptionKeySet.has(`${member.id}:${weekStart}`));
     const shortfallWeekStarts = weeklyTargetSessions > 0
       ? activeWeeks.filter((weekStart) => {
           const done = workoutCountByMemberWeek.get(`${member.id}:${weekStart}`) ?? 0;

@@ -5,7 +5,6 @@ import {
   CalendarDays,
   CircleDashed,
   Clock3,
-  Sparkles,
   Target,
   TrendingUp,
   Users,
@@ -130,10 +129,9 @@ export default async function Home({ searchParams }: HomeProps) {
     <div className="page-stack dashboard-page">
       <section className="dashboard-hero">
         <article className="dashboard-hero-main">
-          <span className="dashboard-kicker">Dashboard Overview</span>
           <h2>메인 대시보드</h2>
           <p className="dashboard-hero-copy">
-            이번 주 운동 진행 현황과 주간 제외 인원을 한 화면에서 빠르게 확인합니다.
+            선택한 주차의 운동 진행 현황과 제외 인원을 확인합니다.
           </p>
           <div className="dashboard-week-row">
             <div className="dashboard-week-card">
@@ -151,7 +149,7 @@ export default async function Home({ searchParams }: HomeProps) {
               </span>
               <div>
                 <strong>{completionRate}%</strong>
-                <p>완료 전환율</p>
+                <p>목표 달성률</p>
               </div>
             </div>
           </div>
@@ -181,6 +179,7 @@ export default async function Home({ searchParams }: HomeProps) {
                   key={weekStart}
                   href={`/?week=${weekStart}&sort=${selectedSort}`}
                   className={`week-chip ${active ? "active" : ""}`}
+                  aria-current={active ? "date" : undefined}
                 >
                   {weekStart}
                 </Link>
@@ -191,11 +190,9 @@ export default async function Home({ searchParams }: HomeProps) {
 
         <article className="dashboard-hero-side">
           <div className="dashboard-side-top">
-            <span className="dashboard-mini-badge">
-              <Sparkles size={14} /> Weekly Snapshot
-            </span>
+            <span className="dashboard-mini-badge">선택 주차 현황</span>
             <strong>{data.totals.workouts}</strong>
-            <p>이번 주 인증 건수</p>
+            <p>인증 건수</p>
           </div>
           <div className="dashboard-side-metrics">
             <div>
@@ -223,7 +220,7 @@ export default async function Home({ searchParams }: HomeProps) {
         </article>
         <article className="dashboard-stat-card">
           <p className="dashboard-stat-label">
-            <Users size={16} /> 이번 주 진행 대상
+            <Users size={16} /> 선택 주차 진행 대상
           </p>
           <strong>{data.totals.activeMembers}</strong>
         </article>
@@ -235,13 +232,13 @@ export default async function Home({ searchParams }: HomeProps) {
         </article>
         <article className="dashboard-stat-card">
           <p className="dashboard-stat-label">
-            <CircleDashed size={16} /> 이번 주 제외
+            <CircleDashed size={16} /> 선택 주차 제외
           </p>
           <strong>{data.totals.excusedMembers}</strong>
         </article>
         <article className="dashboard-stat-card accent">
           <p className="dashboard-stat-label">
-            <Activity size={16} /> 이번 주 인증
+            <Activity size={16} /> 선택 주차 인증
           </p>
           <strong>{data.totals.workouts}</strong>
         </article>
@@ -257,7 +254,6 @@ export default async function Home({ searchParams }: HomeProps) {
         <article className="dashboard-panel dashboard-table-panel">
           <div className="dashboard-panel-head">
             <div>
-              <span className="dashboard-panel-kicker">Progress Table</span>
               <h3>회원별 달성 현황</h3>
             </div>
             <div className="section-head-actions">
@@ -265,24 +261,28 @@ export default async function Home({ searchParams }: HomeProps) {
                 <Link
                   href={`/?week=${selectedWeek}&sort=name_asc`}
                   className={`sort-chip ${selectedSort === "name_asc" ? "active" : ""}`}
+                  aria-current={selectedSort === "name_asc" ? "true" : undefined}
                 >
                   이름순
                 </Link>
                 <Link
                   href={`/?week=${selectedWeek}&sort=done_desc`}
                   className={`sort-chip ${selectedSort === "done_desc" ? "active" : ""}`}
+                  aria-current={selectedSort === "done_desc" ? "true" : undefined}
                 >
                   달성 많은순
                 </Link>
                 <Link
                   href={`/?week=${selectedWeek}&sort=target_desc`}
                   className={`sort-chip ${selectedSort === "target_desc" ? "active" : ""}`}
+                  aria-current={selectedSort === "target_desc" ? "true" : undefined}
                 >
                   목표 높은순
                 </Link>
               </div>
             </div>
           </div>
+          <div className="table-scroll" role="region" aria-label="회원별 달성 현황 표" tabIndex={0}>
           <table className="table dashboard-table">
             <thead>
               <tr>
@@ -312,13 +312,13 @@ export default async function Home({ searchParams }: HomeProps) {
               })}
             </tbody>
           </table>
+          </div>
         </article>
 
         <div className="dashboard-side-grid">
           <article className="dashboard-panel dashboard-summary-panel">
             <div className="dashboard-panel-head">
               <div>
-                <span className="dashboard-panel-kicker">Status Overview</span>
                 <h3>전체 인원 현황</h3>
               </div>
             </div>
@@ -379,7 +379,6 @@ export default async function Home({ searchParams }: HomeProps) {
           <article className="dashboard-panel dashboard-recent-panel">
             <div className="dashboard-panel-head">
               <div>
-                <span className="dashboard-panel-kicker">Recent Activity</span>
                 <h3>최근 인증 처리 내역</h3>
               </div>
             </div>

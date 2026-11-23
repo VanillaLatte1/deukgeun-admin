@@ -1,7 +1,8 @@
 "use client";
 
 import { X } from "lucide-react";
-import { type ReactNode, useEffect, useId, useRef } from "react";
+import { Dialog } from "@base-ui/react/dialog";
+import { type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 
@@ -32,49 +33,15 @@ export function Modal({
   size = "md",
   showDefaultActions = true,
 }: ModalProps) {
-  const titleId = useId();
-  const descriptionId = useId();
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const previousActiveElement = document.activeElement as HTMLElement | null;
-    closeButtonRef.current?.focus();
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      previousActiveElement?.focus?.();
-    };
-  }, [onClose, open]);
-
-  if (!open) return null;
-
   return (
-    <div
-      className="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      aria-describedby={description ? descriptionId : undefined}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div className={`modal-panel modal-panel-${size}`}>
+    <Dialog.Root open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Backdrop className="modal-backdrop" />
+        <div className="modal-positioner">
+      <Dialog.Popup className={`modal-panel modal-panel-${size}`}>
         <div className="modal-head">
-          <h3 id={titleId}>{title}</h3>
+          <Dialog.Title render={<h3 />}>{title}</Dialog.Title>
           <Button
-            ref={closeButtonRef}
             className="modal-close"
             type="button"
             aria-label="닫기"
@@ -86,7 +53,7 @@ export function Modal({
           </Button>
         </div>
 
-        {description ? <p id={descriptionId}>{description}</p> : null}
+        {description ? <Dialog.Description render={<p />}>{description}</Dialog.Description> : null}
         {children}
 
         {showDefaultActions ? (
@@ -99,7 +66,9 @@ export function Modal({
             </Button>
           </div>
         ) : null}
-      </div>
-    </div>
+      </Dialog.Popup>
+        </div>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import AppChrome from "@/components/app-chrome";
 import "./globals.css";
 import "./refinement.css";
+import "./hallmark.css";
 
 export const metadata: Metadata = {
   title: "득근둑근 Backoffice",

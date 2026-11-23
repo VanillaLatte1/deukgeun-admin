@@ -245,6 +245,7 @@ export async function createMemberWithGoal(formData: FormData) {
   const targetMinutes = Number(formData.get("target_minutes") ?? 0);
   const overallGoalAchieved = parseOverallGoalAchieved(formData.get("overall_goal_achieved"));
   const settlementFields = getSettlementFields(formData, overallGoalAchieved);
+  const activityStartDate = parseOptionalDate(formData.get("activity_start_date"));
 
   if (!name) {
     throw new Error("회원 이름은 필수입니다.");
@@ -270,6 +271,7 @@ export async function createMemberWithGoal(formData: FormData) {
     overall_goal_title: null,
     overall_goal_value: null,
     overall_goal_achieved: overallGoalAchieved,
+    ...(activityStartDate ? { activity_start_date: activityStartDate } : {}),
     ...settlementFields,
   };
 
@@ -280,6 +282,7 @@ export async function createMemberWithGoal(formData: FormData) {
     .single();
 
   if (memberError) {
+    if (activityStartDate) throwSupabaseError("회원 집계 시작일 등록", memberError);
     if (!isMissingOverallGoalColumn(memberError)) {
       throwSupabaseError("회원 등록", memberError);
     }
@@ -333,6 +336,7 @@ export async function updateMemberWithGoal(formData: FormData) {
   const targetMinutes = Number(formData.get("target_minutes") ?? 0);
   const overallGoalAchieved = parseOverallGoalAchieved(formData.get("overall_goal_achieved"));
   const settlementFields = getSettlementFields(formData, overallGoalAchieved);
+  const activityStartDate = parseOptionalDate(formData.get("activity_start_date"));
 
   if (!memberId) {
     throw new Error("수정할 회원 정보가 없습니다.");
@@ -362,26 +366,13 @@ export async function updateMemberWithGoal(formData: FormData) {
       name,
       gender,
       overall_goal_achieved: overallGoalAchieved,
+      activity_start_date: activityStartDate,
       ...settlementFields,
     })
     .eq("id", memberId);
 
   if (memberError) {
-    if (!isMissingOverallGoalColumn(memberError)) {
-      throwSupabaseError("회원 정보 수정", memberError);
-    }
-
-    const { error: fallbackMemberError } = await supabase
-      .from("members")
-      .update({
-        name,
-        gender,
-      })
-      .eq("id", memberId);
-
-    if (fallbackMemberError) {
-      throwSupabaseError("회원 기본 정보 수정", fallbackMemberError);
-    }
+    throwSupabaseError("회원 정보 수정 (집계 시작일 스키마 확인)", memberError);
   }
 
   await saveFixedWeeklyGoal(supabase, memberId, targetSessions, targetMinutes);

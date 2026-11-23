@@ -83,7 +83,6 @@ export default async function WorkoutRecordsPage({ searchParams }: WorkoutRecord
       <section className="panel panel-highlight">
         <div className="section-head members-form-head">
           <div>
-            <span className="page-eyebrow">Verification History</span>
             <h2 className="title-with-icon">
               <ClipboardList size={18} /> 인증 기록 관리
             </h2>
@@ -96,18 +95,12 @@ export default async function WorkoutRecordsPage({ searchParams }: WorkoutRecord
 
       <section className="panel admin-detail-panel">
         <div className="admin-detail-form">
-          <div className="admin-form-notice">
-            <strong>조회 조건을 바꾸면 아래 기록이 바로 해당 조건으로 정리됩니다.</strong>
-            <span>최근 주차는 빠른 버튼으로, 오래된 주차는 셀렉트에서 선택하세요.</span>
-          </div>
-
           <section className="admin-form-section">
             <div className="admin-form-section-head">
               <div className="admin-form-section-title-row">
                 <h3>조회 조건</h3>
-                <span className="admin-form-step">1</span>
               </div>
-              <p>현재 조회 중인 주차와 회원 필터입니다.</p>
+              <p>주차와 회원을 선택한 후 검색하세요. 최근 주차는 아래에서 바로 선택할 수 있습니다.</p>
             </div>
 
             <div className="week-badge-wrap">
@@ -164,6 +157,7 @@ export default async function WorkoutRecordsPage({ searchParams }: WorkoutRecord
                     key={weekStart}
                     href={`/workout-records?week=${weekStart}${memberParam}`}
                     className={`week-chip ${active ? "active" : ""}`}
+                    aria-current={active ? "page" : undefined}
                   >
                     {weekStart}
                   </Link>

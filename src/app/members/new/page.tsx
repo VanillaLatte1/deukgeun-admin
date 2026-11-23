@@ -19,12 +19,11 @@ export default async function NewMemberPage() {
       <section className="panel panel-highlight">
         <div className="section-head members-form-head">
           <div>
-            <span className="page-eyebrow">New Member</span>
             <h2 className="title-with-icon">
               <UserPlus size={18} /> 회원 등록 및 목표 설정
             </h2>
             <p className="member-page-subcopy">
-              새 회원의 기본 정보, 주간 목표, 최종 목표를 한 화면에서 차분하게 설정합니다.
+              새 회원의 기본 정보와 주간 목표, 최종 목표를 설정합니다.
             </p>
           </div>
           <Button
@@ -33,7 +32,7 @@ export default async function NewMemberPage() {
             nativeButton={false}
             render={<Link href="/members" />}
           >
-            <ArrowLeft size={16} /> 목록
+            <ArrowLeft size={16} aria-hidden="true" /> 회원 목록
           </Button>
         </div>
       </section>

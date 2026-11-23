@@ -37,9 +37,9 @@ export function MemberGoalSettlementFields({
         <div className="member-form-section-head">
           <div className="member-form-section-title-row">
             <h3>최종 목표 판정</h3>
-            <span className="member-form-step">3</span>
+            <span className="member-form-step" aria-hidden="true">3</span>
           </div>
-          <p>목표의 세부 내용은 입력하지 않고, 최종 달성 여부와 본인 설정 벌금액만 저장합니다.</p>
+          <p>최종 달성 여부와 본인 설정 벌금액을 저장합니다. 목표 세부 내용은 입력하지 않습니다.</p>
         </div>
 
         <div className="member-form-grid member-form-grid-overall-status">
@@ -73,7 +73,7 @@ export function MemberGoalSettlementFields({
           <div className="member-form-section-head">
             <div className="member-form-section-title-row">
               <h3>{settlementPeriod.shortLabel} 정산</h3>
-              <span className="member-form-step">4</span>
+              <span className="member-form-step" aria-hidden="true">4</span>
             </div>
             <p>
               최종 목표 미달성 인원이 {settlementPeriod.proofMonthLabel} 안에 한 번이라도

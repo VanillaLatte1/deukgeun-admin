@@ -66,24 +66,12 @@ function revalidateWorkoutPages() {
 function validateWorkoutInput(
   exerciseTypeRaw: string,
   durationMinutes: number,
-  startImage: File | null,
-  endImage: File | null,
 ) {
   const exerciseType = toWorkoutType(exerciseTypeRaw);
   const policy = getWorkoutPolicy(exerciseType);
-  const hasStartImage = Boolean(startImage && startImage.size > 0);
-  const hasEndImage = Boolean(endImage && endImage.size > 0);
 
   if (!Number.isFinite(durationMinutes) || durationMinutes < policy.minimumValidMinutes) {
     return failure(`${policy.label}은 최소 ${policy.minimumValidMinutes}분 이상이어야 합니다.`);
-  }
-
-  if (!hasStartImage) {
-    return failure("인증 이미지를 첨부해 주세요.");
-  }
-
-  if (policy.requiredImageCount === 2 && !hasEndImage) {
-    return failure("일반 운동은 시작/종료 이미지를 모두 첨부해야 합니다.");
   }
 
   return null;
@@ -115,7 +103,7 @@ export async function createWorkoutSession(
       return failure("회원과 운동 날짜는 필수입니다.");
     }
 
-    const inputError = validateWorkoutInput(exerciseType, durationMinutes, startImage, endImage);
+    const inputError = validateWorkoutInput(exerciseType, durationMinutes);
     if (inputError) {
       return inputError;
     }
@@ -144,10 +132,13 @@ export async function createWorkoutSession(
 
     const bucket = "workout-proofs";
     const policy = getWorkoutPolicy(exerciseType);
-    const startPath = await uploadImage(bucket, memberId, workoutDate, "start", startImage as File);
+    // The existing schema requires a non-null start path; an empty string means no photo.
+    const startPath = startImage && startImage.size > 0
+      ? await uploadImage(bucket, memberId, workoutDate, "start", startImage)
+      : "";
     const endPath =
-      policy.requiredImageCount === 2
-        ? await uploadImage(bucket, memberId, workoutDate, "end", endImage as File)
+      policy.requiredImageCount === 2 && endImage && endImage.size > 0
+        ? await uploadImage(bucket, memberId, workoutDate, "end", endImage)
         : null;
 
     const { error } = await supabase.from("workout_sessions").insert({
@@ -180,7 +171,7 @@ export async function updateWorkoutSession(
   try {
     const id = String(formData.get("id") ?? "").trim();
     const workoutDate = String(formData.get("workout_date") ?? "").trim();
-    const sessionNo = normalizeSessionNo(formData.get("session_no"));
+    const requestedSessionNo = Number(formData.get("session_no"));
     const exerciseType = toWorkoutType(String(formData.get("exercise_type") ?? ""));
     const inputDurationMinutes = Number(formData.get("duration_minutes") ?? 0);
     const notesRaw = String(formData.get("notes") ?? "").trim();
@@ -194,33 +185,25 @@ export async function updateWorkoutSession(
     const supabase = createSupabaseAdmin();
     const { data: session, error: sessionError } = await supabase
       .from("workout_sessions")
-      .select("member_id, exercise_type, start_image_path, end_image_path")
+      .select("member_id, exercise_type, start_image_path, end_image_path, session_no")
       .eq("id", id)
       .single();
 
     if (sessionError || !session) {
       throw sessionError ?? new Error("수정할 인증 내역을 찾을 수 없습니다.");
     }
+    const sessionNo = requestedSessionNo === session.session_no && requestedSessionNo > 5
+      ? session.session_no
+      : normalizeSessionNo(formData.get("session_no"));
 
     const policy = getWorkoutPolicy(exerciseType);
     const hasStartImage = Boolean(startImage && startImage.size > 0);
     const hasEndImage = Boolean(endImage && endImage.size > 0);
     const nextStartCandidate = hasStartImage ? (startImage as File) : null;
     const nextEndCandidate = hasEndImage ? (endImage as File) : null;
-    const hasStartProofAfterUpdate = Boolean(session.start_image_path || nextStartCandidate);
-    const hasEndProofAfterUpdate =
-      policy.requiredImageCount === 1 ? true : Boolean(session.end_image_path || nextEndCandidate);
 
     if (!Number.isFinite(inputDurationMinutes) || inputDurationMinutes < policy.minimumValidMinutes) {
       return failure(`${policy.label}은 최소 ${policy.minimumValidMinutes}분 이상이어야 합니다.`);
-    }
-
-    if (!hasStartProofAfterUpdate) {
-      return failure("인증 이미지를 첨부해 주세요.");
-    }
-
-    if (!hasEndProofAfterUpdate) {
-      return failure("일반 운동은 시작/종료 이미지를 모두 첨부해야 합니다.");
     }
 
     const weekStart = getCurrentWeekStart(new Date(workoutDate));
@@ -264,11 +247,7 @@ export async function updateWorkoutSession(
         duration_minutes: Math.max(0, inputDurationMinutes),
         notes: notesRaw || null,
         ...(nextStartPath ? { start_image_path: nextStartPath } : {}),
-        ...(policy.requiredImageCount === 2
-          ? nextEndPath
-            ? { end_image_path: nextEndPath }
-            : {}
-          : { end_image_path: null }),
+        ...(nextEndPath ? { end_image_path: nextEndPath } : {}),
       })
       .eq("id", id);
 
@@ -279,9 +258,6 @@ export async function updateWorkoutSession(
     const removablePaths: string[] = [];
     if (nextStartPath && session.start_image_path) {
       removablePaths.push(session.start_image_path);
-    }
-    if (policy.requiredImageCount === 1 && session.end_image_path) {
-      removablePaths.push(session.end_image_path);
     }
     if (nextEndPath && session.end_image_path) {
       removablePaths.push(session.end_image_path);

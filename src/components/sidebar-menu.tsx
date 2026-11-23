@@ -87,6 +87,7 @@ export default function SidebarMenu({
           return (
             <SheetClose
               key={menu.href}
+              nativeButton={false}
               render={<Link href={menu.href} />}
               className={linkClassName}
               aria-label={menu.title}

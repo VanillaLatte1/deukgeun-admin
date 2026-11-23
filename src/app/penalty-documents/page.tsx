@@ -73,7 +73,6 @@ export default async function PenaltyDocumentsPage({
     <div className="page-stack penalty-documents-page">
       <section className="penalty-hero print-hidden">
         <div>
-          <span className="dashboard-panel-kicker">Penalty Documents</span>
           <h2>벌금 문서 출력</h2>
           <p className="weekly-exceptions-subcopy">
             반기와 기준 주차를 선택하면 해당 주차까지의 누적 결과로 벌금 고지서를 만들 수 있습니다.
@@ -86,7 +85,7 @@ export default async function PenaltyDocumentsPage({
           <div>
             <h3>문서 설정</h3>
             <p className="weekly-exceptions-subcopy">
-              기준 주차와 회원을 설정하면 공문 형식의 벌금 고지서를 출력할 수 있습니다.
+              설정을 바꾸면 아래 문서가 갱신됩니다. 내용을 확인한 뒤 인쇄하세요.
             </p>
           </div>
         </div>

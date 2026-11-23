@@ -1,0 +1,3 @@
+# Local audit evidence and tooling. Keep credentials and rendered member data out of Git.
+*
+!.gitignore

@@ -36,7 +36,8 @@ export function PenaltyDocumentFilterForm({
     <form method="get" className="form-grid penalty-filter-form">
       <label>
         회원 선택
-        <select name="member" defaultValue={selectedMemberId} onChange={submitOnChange}>
+        <select name="member" defaultValue={selectedMemberId} onChange={submitOnChange} disabled={members.length === 0}>
+          {members.length === 0 ? <option value="">선택할 회원이 없습니다</option> : null}
           {members.map((member) => (
             <option key={member.id} value={member.id}>
               {member.name}
